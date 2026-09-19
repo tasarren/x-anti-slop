@@ -1,0 +1,8 @@
+node_modules/
+dist/
+artifacts/
+.release/
+web-ext-artifacts/
+.env
+.env.*
+.cocoindex_code/

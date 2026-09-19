@@ -1,0 +1,69 @@
+name: Submit to extension stores
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub release tag (must match package.json)
+        required: true
+        default: v0.1.0
+        type: string
+      store:
+        description: Store to submit for review
+        required: true
+        default: both
+        type: choice
+        options: [both, chrome, firefox]
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    strategy:
+      fail-fast: false
+      matrix:
+        store: ${{ fromJSON(inputs.store == 'both' && '["chrome","firefox"]' || format('["{0}"]', inputs.store)) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ matrix.store }}-store
+    concurrency:
+      group: publish-${{ matrix.store }}
+      cancel-in-progress: false
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run package
+      - name: Verify the rebuild against the published release
+        run: |
+          gh release download "$RELEASE_TAG" --dir .release --pattern '*.zip' --pattern SHA256SUMS.txt
+          (cd .release && sha256sum --check SHA256SUMS.txt)
+          diff artifacts/SHA256SUMS.txt .release/SHA256SUMS.txt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+      - name: Upload and submit to Chrome Web Store
+        if: matrix.store == 'chrome'
+        run: node scripts/publish-chrome.ts
+        env:
+          CHROME_PUBLISHER_ID: ${{ vars.CHROME_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ vars.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+      - name: Sign and submit to Firefox Add-ons
+        if: matrix.store == 'firefox'
+        run: node scripts/publish-firefox.ts
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          AMO_LICENSE: ${{ vars.AMO_LICENSE }}

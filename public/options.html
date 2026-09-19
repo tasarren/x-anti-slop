@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>X-Anti-Slop · Filters</title>
+  <link rel="stylesheet" href="options.css">
+  <script src="options.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="brand"><span class="mark" aria-hidden="true">/×/</span><span>X-Anti-Slop<small>YOUR TIMELINE. YOUR RULES.</small></span></div>
+      <span class="version">v__VERSION__</span>
+    </header>
+    <div class="intro"><h1>A little less noise.</h1><p>Keep the posts you want. Filter the patterns you don’t.</p></div>
+    <form id="settings-form">
+      <fieldset id="controls" disabled>
+        <section class="power">
+          <label for="enabled"><strong>Filter posts on X</strong><span>Changes apply to your open timelines when saved.</span></label>
+          <input id="enabled" type="checkbox" role="switch">
+        </section>
+        <section class="panel">
+          <div class="section-title"><div><h2>Your filters</h2><p>A post is hidden when any enabled pattern matches.</p></div><span id="filter-count" class="count">0</span></div>
+          <div id="filters"></div>
+          <button id="add-filter" type="button" class="add">＋ Add a filter</button>
+          <p class="hint">Use a regex pattern without <code>/</code> delimiters. Flags are separate: <code>i</code> ignores case, <code>m</code> enables multiline anchors.</p>
+        </section>
+        <section class="panel">
+          <h2>When a post matches</h2>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="mode" value="placeholder" checked><span><strong>Leave a small notice</strong><small>A 50px row with an option to reveal the post.</small></span></label>
+            <label class="choice"><input type="radio" name="mode" value="remove"><span><strong>Hide it completely</strong><small>Collapse the row, including the notice.</small></span></label>
+          </div>
+        </section>
+        <section class="panel tester">
+          <label for="sample"><h2>Try your filters</h2></label>
+          <textarea id="sample" rows="2" placeholder="Paste some post text to test your current filters…"></textarea>
+          <p id="test-result" aria-live="polite">Try a sentence before you save.</p>
+        </section>
+      </fieldset>
+      <footer>
+        <button id="reset" type="button" class="quiet">Reset defaults</button>
+        <p id="status" role="status" aria-live="polite">Loading settings…</p>
+        <button id="save" type="submit" class="primary" disabled>Save changes</button>
+      </footer>
+    </form>
+    <p class="privacy">On your device. No accounts, tracking, or data sent anywhere.</p>
+  </main>
+  <template id="filter-template">
+    <div class="filter-row">
+      <input class="filter-enabled" type="checkbox" aria-label="Enable filter">
+      <label class="pattern-field"><span>Pattern</span><input class="pattern" type="text" spellcheck="false" autocomplete="off" placeholder="e.g. [—«»]"></label>
+      <label class="flags-field"><span>Flags</span><input class="flags" type="text" spellcheck="false" autocomplete="off" placeholder="i" aria-label="Regex flags"></label>
+      <button class="delete" type="button" aria-label="Delete filter" title="Delete filter">×</button>
+      <p class="filter-error" role="alert"></p>
+    </div>
+  </template>
+</body>
+</html>

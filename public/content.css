@@ -1,0 +1,39 @@
+[data-xas-mode] {
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+[data-xas-mode] > :not(.xas-notice) { display: none !important; }
+[data-xas-mode="placeholder"] { height: 50px !important; }
+[data-xas-mode="remove"] {
+  visibility: hidden !important;
+  height: 0 !important;
+  max-height: 0 !important;
+  margin-block: 0 !important;
+  border: 0 !important;
+}
+.xas-notice {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  height: 50px !important;
+  padding: 0 16px !important;
+  border-bottom: 1px solid #80808040 !important;
+  color: #71767b !important;
+  font: 13px/1.25 system-ui, sans-serif !important;
+}
+.xas-notice button {
+  flex-shrink: 0 !important;
+  border: 1px solid #80808066 !important;
+  border-radius: 20px !important;
+  padding: 5px 12px !important;
+  background: transparent !important;
+  color: #1d9bf0 !important;
+  font: 600 12px system-ui, sans-serif !important;
+  cursor: pointer !important;
+}
+.xas-notice button:focus-visible { outline: 2px solid #1d9bf0 !important; outline-offset: 2px !important; }
+[data-xas-mode="remove"] > .xas-notice { display: none !important; }

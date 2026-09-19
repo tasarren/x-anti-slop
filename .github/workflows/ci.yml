@@ -1,0 +1,66 @@
+name: Build and release
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Check, build, and package both browsers
+        run: npm run package
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: x-anti-slop-${{ github.sha }}
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: x-anti-slop-${{ github.sha }}
+          path: artifacts
+      - name: Create the tagged GitHub release
+        run: |
+          gh release create "$RELEASE_TAG" artifacts/* --verify-tag --title "X-Anti-Slop $RELEASE_TAG" --notes-file /dev/stdin <<'NOTES'
+          Chromium and Firefox packages, plus reproducible source and SHA-256 checksums.
+
+          Chromium users can extract the Chromium ZIP and use **Load unpacked**.
+          The Firefox ZIP is unsigned and can be loaded as a temporary add-on. Permanent installation requires Mozilla signing or the Firefox store listing.
+
+          See the repository README for installation instructions. Store submission is a separate manual workflow.
+          NOTES
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
