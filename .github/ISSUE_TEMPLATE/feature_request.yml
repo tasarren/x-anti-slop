@@ -1,0 +1,17 @@
+name: Feature request
+description: Suggest an improvement to filtering or usability.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe a concrete use case.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include alternatives or an example if useful.
+    validations:
+      required: true

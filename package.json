@@ -2,6 +2,9 @@
   "name": "x-anti-slop",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/tasarren/x-anti-slop.git" },
+  "bugs": { "url": "https://github.com/tasarren/x-anti-slop/issues" },
   "type": "module",
   "description": "Personal regular-expression filters for posts on X.",
   "engines": {

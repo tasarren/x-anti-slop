@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280">
+  <rect width="440" height="280" fill="#173b2c"/>
+  <circle cx="427" cy="-22" r="184" fill="#234b35"/>
+  <rect x="32" y="38" width="82" height="82" rx="23" fill="#d6efba"/>
+  <g stroke="#173b2c" stroke-width="5" stroke-linecap="round" fill="none"><path d="M56 64 47 94M99 64 90 94M67 70 79 82M79 70 67 82"/></g>
+  <g fill="#e6efdf"><rect x="151" y="39" width="248" height="42" rx="11"/><rect x="151" y="108" width="248" height="42" rx="11"/></g>
+  <g fill="#6f9475"><rect x="151" y="90" width="248" height="9" rx="4"/><rect x="151" y="159" width="248" height="9" rx="4"/></g>
+  <g stroke="#729277" stroke-width="5" stroke-linecap="round"><path d="M170 55H305M170 65H374M170 124H355M170 134H283"/></g>
+  <text x="32" y="217" fill="#f2f7ee" font-family="DejaVu Sans,sans-serif" font-size="30" font-weight="bold">X-Anti-Slop</text>
+  <text x="32" y="247" fill="#b8d8b0" font-family="DejaVu Sans,sans-serif" font-size="15">Your patterns. Your timeline.</text>
+</svg>

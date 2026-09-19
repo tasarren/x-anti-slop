@@ -6,7 +6,6 @@ on:
       tag:
         description: Existing GitHub release tag (must match package.json)
         required: true
-        default: v0.1.0
         type: string
       store:
         description: Store to submit for review
@@ -66,4 +65,3 @@ jobs:
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
-          AMO_LICENSE: ${{ vars.AMO_LICENSE }}

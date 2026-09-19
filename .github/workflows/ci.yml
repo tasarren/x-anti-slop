@@ -52,7 +52,9 @@ jobs:
           path: artifacts
       - name: Create the tagged GitHub release
         run: |
-          gh release create "$RELEASE_TAG" artifacts/* --verify-tag --title "X-Anti-Slop $RELEASE_TAG" --notes-file /dev/stdin <<'NOTES'
+          release_flags=()
+          if [[ "$RELEASE_TAG" == *-rc.* ]]; then release_flags+=(--prerelease --latest=false); fi
+          gh release create "$RELEASE_TAG" artifacts/* "${release_flags[@]}" --verify-tag --title "X-Anti-Slop $RELEASE_TAG" --notes-file /dev/stdin <<'NOTES'
           Chromium and Firefox packages, plus reproducible source and SHA-256 checksums.
 
           Chromium users can extract the Chromium ZIP and use **Load unpacked**.

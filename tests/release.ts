@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { strFromU8, unzipSync } from "fflate";
 import { assertReleaseTag, VERSION } from "../scripts/version.ts";
@@ -9,7 +11,8 @@ import { publishChrome } from "../scripts/publish-chrome.ts";
 
 test("release tags, manifests, badge, lockfile and ZIP names agree", async () => {
   assertReleaseTag(`v${VERSION}`);
-  for (const tag of ["main", VERSION, "v999.0.0", `v${VERSION}-beta.1`]) assert.throws(() => assertReleaseTag(tag));
+  assertReleaseTag(`v${VERSION}-rc.1`);
+  for (const tag of ["main", VERSION, "v999.0.0", `v${VERSION}-beta.1`, `v${VERSION}-rc.0`, `v${VERSION}-rc.01`, `v${VERSION}-rc.1-extra`]) assert.throws(() => assertReleaseTag(tag));
   const lock = JSON.parse(await readFile("package-lock.json", "utf8"));
   assert.equal(lock.version, VERSION);
   assert.equal(lock.packages[""].version, VERSION);
@@ -17,6 +20,7 @@ test("release tags, manifests, badge, lockfile and ZIP names agree", async () =>
     const zip = unzipSync(await readFile(`artifacts/x-anti-slop-${VERSION}-${browser}.zip`));
     const manifest = JSON.parse(strFromU8(zip["manifest.json"]!));
     assert.equal(manifest.version, VERSION);
+    assert.ok(strFromU8(zip["LICENSE"]!).includes("MIT License"));
     assert.ok(strFromU8(zip["options.html"]!).includes(`>v${VERSION}</span>`));
     assert.equal(Object.keys(zip).some(name => name.includes("__VERSION__")), false);
   }
@@ -24,7 +28,7 @@ test("release tags, manifests, badge, lockfile and ZIP names agree", async () =>
 
 test("source archive is rebuildable, excludes generated/private files, and checksums match", async () => {
   const source = unzipSync(await readFile(`artifacts/x-anti-slop-${VERSION}-source.zip`));
-  for (const path of ["package-lock.json", "scripts/build.ts", "src/content.ts", "tests/check.ts", ".github/workflows/ci.yml", "docs/RELEASING.md"]) assert.ok(source[path], path);
+  for (const path of ["LICENSE", "CONTRIBUTING.md", "SECURITY.md", "package-lock.json", "scripts/build.ts", "src/content.ts", "tests/check.ts", ".github/workflows/ci.yml", "docs/RELEASING.md", "public/icons/128.png"]) assert.ok(source[path], path);
   assert.equal(Object.keys(source).some(path => /^(node_modules|dist|artifacts|\.git\/|\.env)/.test(path)), false);
   const sums = await readFile("artifacts/SHA256SUMS.txt", "utf8");
   for (const line of sums.trim().split("\n")) {
@@ -34,6 +38,30 @@ test("source archive is rebuildable, excludes generated/private files, and check
   }
   execFileSync(process.execPath, ["scripts/package.ts"], { stdio: "pipe" });
   assert.equal(await readFile("artifacts/SHA256SUMS.txt", "utf8"), sums, "Repacking must produce identical bytes");
+});
+
+test("source packaging honors shared/local ignores and skips deleted files and symlinks", async t => {
+  const fixture = await mkdtemp(join(tmpdir(), "xas-package-"));
+  t.after(() => rm(fixture, { recursive: true, force: true }));
+  execFileSync("git", ["init", "--quiet", fixture]);
+  await mkdir(join(fixture, "docs"));
+  await writeFile(join(fixture, ".gitignore"), "dist/\nartifacts/\n*.pem\n");
+  await writeFile(join(fixture, ".git/info/exclude"), "notes.local.md\n");
+  await writeFile(join(fixture, "docs/guide.md"), "Public documentation");
+  await writeFile(join(fixture, "docs/private.pem"), "SYNTHETIC SECRET");
+  await writeFile(join(fixture, "notes.local.md"), "Personal notes");
+  await symlink("guide.md", join(fixture, "docs/link.md"));
+  await writeFile(join(fixture, "deleted.md"), "Removed source");
+  execFileSync("git", ["-C", fixture, "add", "deleted.md"]);
+  await rm(join(fixture, "deleted.md"));
+  for (const browser of ["chromium", "firefox"]) {
+    await mkdir(join(fixture, "dist", browser), { recursive: true });
+    await writeFile(join(fixture, "dist", browser, "manifest.json"), "{}");
+  }
+  execFileSync(process.execPath, [resolve("scripts/package.ts")], { cwd: fixture, stdio: "pipe" });
+  const source = unzipSync(await readFile(join(fixture, `artifacts/x-anti-slop-${VERSION}-source.zip`)));
+  assert.ok(source["docs/guide.md"]);
+  for (const path of ["docs/private.pem", "notes.local.md", "docs/link.md", "deleted.md"]) assert.equal(source[path], undefined, path);
 });
 
 const credentials = { publisherId: "publisher", extensionId: "extension", clientId: "client", clientSecret: "secret", refreshToken: "refresh" };

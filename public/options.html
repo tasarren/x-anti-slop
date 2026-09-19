@@ -38,9 +38,19 @@
           <textarea id="sample" rows="2" placeholder="Paste some post text to test your current filters…"></textarea>
           <p id="test-result" aria-live="polite">Try a sentence before you save.</p>
         </section>
+        <section class="panel">
+          <div class="section-title"><div><h2>Account whitelist</h2><p>Each post or quote uses its own author’s whitelist status.</p></div></div>
+          <div class="whitelist-add">
+            <label for="whitelist-handle">Account handle<input id="whitelist-handle" type="text" placeholder="@account" maxlength="16" spellcheck="false" autocomplete="off" aria-describedby="whitelist-status"></label>
+            <button id="add-whitelist" type="button" class="primary" disabled>Add account</button>
+          </div>
+          <p id="whitelist-status" role="status" aria-live="polite">Account changes save immediately.</p>
+          <ul id="whitelist-list" aria-label="Whitelisted accounts"></ul>
+          <p class="hint">Click the star beside an author, or Whitelist on a hidden-post notice. Matching quotes can still be hidden inside a whitelisted author’s post.</p>
+        </section>
       </fieldset>
       <footer>
-        <button id="reset" type="button" class="quiet">Reset defaults</button>
+        <button id="reset" type="button" class="quiet" title="Reset filters and display preferences; keep the account whitelist">Reset defaults</button>
         <p id="status" role="status" aria-live="polite">Loading settings…</p>
         <button id="save" type="submit" class="primary" disabled>Save changes</button>
       </footer>

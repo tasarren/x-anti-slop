@@ -1,11 +1,34 @@
 export type Filter = { pattern: string; flags: string; enabled: boolean };
 export type Settings = { enabled: boolean; mode: "placeholder" | "remove"; filters: Filter[] };
 
+export const WHITELIST_PREFIX = "whitelist:";
+
+export function normalizeHandle(value: string): string | undefined {
+  const handle = value.trim().replace(/^@/, "").toLowerCase();
+  // Older X accounts can have short handles; profile links are the source of identity.
+  return /^[a-z0-9_]{1,15}$/.test(handle) ? handle : undefined;
+}
+
+export function whitelistKey(handle: string): string {
+  const normalized = normalizeHandle(handle);
+  if (!normalized) throw new Error("Use an X handle with 1–15 letters, numbers or underscores.");
+  return WHITELIST_PREFIX + normalized;
+}
+
+export function parseWhitelist(storage: Record<string, unknown>): Set<string> {
+  const accounts = new Set<string>();
+  for (const [key, value] of Object.entries(storage)) {
+    if (!key.startsWith(WHITELIST_PREFIX) || value !== true) continue;
+    const handle = key.slice(WHITELIST_PREFIX.length);
+    if (normalizeHandle(handle) === handle) accounts.add(handle);
+  }
+  return accounts;
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
   mode: "placeholder",
-  // Preserve the user's U+200E marks, but show their escapes in the editor.
-  filters: [{ pattern: ".?[\\u200e—\\u200e«»].?", flags: "u", enabled: true }],
+  filters: [{ pattern: ".?[—«»].?", flags: "u", enabled: true }],
 };
 
 export function parseSettings(value: unknown): Settings {

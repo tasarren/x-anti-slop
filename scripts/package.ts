@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { lstat, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { zipSync } from "fflate";
 import { VERSION } from "./version.ts";
@@ -10,10 +11,19 @@ const checksums: string[] = [];
 for (const target of ["chromium", "firefox", "source"]) {
   const root = target === "source" ? "." : join("dist", target);
   const files: Record<string, Uint8Array> = {};
-  const folders = target === "source" ? ["src", "public", "scripts", "tests", ".github", "docs"] : [root];
-  const paths = target === "source" ? ["package.json", "package-lock.json", "tsconfig.json", "README.md", "AGENTS.md", ".gitignore"] : [];
-  for (const folder of folders) {
-    for (const entry of await readdir(folder, { recursive: true, withFileTypes: true })) {
+  const paths: string[] = [];
+  if (target === "source") {
+    // Native Git honors .gitignore, .git/info/exclude and contributors' global excludes.
+    const candidates = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "--deduplicate", "-z"], { encoding: "utf8" }).split("\0").filter(Boolean);
+    for (const path of candidates) {
+      const stat = await lstat(path).catch((error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return undefined;
+        throw error;
+      });
+      if (stat?.isFile()) paths.push(path);
+    }
+  } else {
+    for (const entry of await readdir(root, { recursive: true, withFileTypes: true })) {
       if (entry.isFile()) paths.push(join(entry.parentPath, entry.name));
     }
   }

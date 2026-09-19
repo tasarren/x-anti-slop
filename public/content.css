@@ -25,7 +25,7 @@
   color: #71767b !important;
   font: 13px/1.25 system-ui, sans-serif !important;
 }
-.xas-notice button {
+.xas-notice button, .xas-whitelist {
   flex-shrink: 0 !important;
   border: 1px solid #80808066 !important;
   border-radius: 20px !important;
@@ -35,5 +35,97 @@
   font: 600 12px system-ui, sans-serif !important;
   cursor: pointer !important;
 }
-.xas-notice button:focus-visible { outline: 2px solid #1d9bf0 !important; outline-offset: 2px !important; }
+.xas-whitelist { margin-inline-start: 6px !important; line-height: 1.2 !important; }
+.xas-whitelist[aria-pressed="true"] { color: #399667 !important; border-color: #39966788 !important; }
+.xas-whitelist-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  width: 24px !important;
+  height: 24px !important;
+  padding: 4px !important;
+  margin-inline-start: 3px !important;
+  border: 0 !important;
+  color: #71767b !important;
+  vertical-align: middle !important;
+}
+.xas-whitelist-icon svg { width: 16px !important; height: 16px !important; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.xas-whitelist-icon[aria-pressed="true"] svg { fill: currentColor; }
+.xas-whitelist-icon:hover { background: #1d9bf014 !important; }
+.xas-whitelist-icon[data-xas-error] { color: #d97732 !important; }
+.xas-whitelist:disabled { cursor: wait !important; opacity: .65 !important; }
+.xas-notice .xas-whitelist { margin: 0 !important; }
+.xas-notice > span { flex: 1 !important; min-width: 0 !important; }
+.xas-notice button:focus-visible, .xas-whitelist:focus-visible { outline: 2px solid #1d9bf0 !important; outline-offset: 2px !important; }
 [data-xas-mode="remove"] > .xas-notice { display: none !important; }
+[data-xas-quote-hidden] { display: none !important; }
+.xas-quote-notice { border: 1px solid #80808040 !important; border-radius: 12px !important; margin-block: 8px !important; }
+
+#xas-settings-card {
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  margin: 4px 0 !important;
+  padding: 0 !important;
+  color: #e7eee9 !important;
+  font: 13px/1.4 system-ui, sans-serif !important;
+}
+#xas-settings-card img { width: 32px !important; height: 32px !important; flex-shrink: 0 !important; }
+#xas-settings-card strong { display: block !important; font-weight: 700 !important; }
+#xas-settings-card small { display: block !important; font-size: 11px !important; color: #95aa9d !important; }
+#xas-settings-card button {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  padding: 8px !important;
+  border: 1px solid #345341 !important;
+  border-radius: 14px !important;
+  background: #0e1711 !important;
+  color: inherit !important;
+  font: inherit !important;
+  text-align: start !important;
+  cursor: pointer !important;
+}
+#xas-settings-card button:hover { background: #19271d !important; }
+#xas-settings-card .xas-card-action { margin-inline-start: auto !important; color: #bde4c6 !important; font-size: 11px !important; }
+#xas-settings-card.xas-compact-card { width: 48px !important; align-self: center !important; }
+#xas-settings-card.xas-compact-card button { width: 48px !important; height: 48px !important; padding: 7px !important; justify-content: center !important; border-radius: 50% !important; }
+#xas-settings-card.xas-compact-card .xas-card-copy, #xas-settings-card.xas-compact-card .xas-card-action { display: none !important; }
+#xas-settings-card.xas-floating-card {
+  position: fixed !important;
+  right: 16px !important;
+  bottom: 76px !important;
+  width: 48px !important;
+  margin: 0 !important;
+  z-index: 9999 !important;
+  box-shadow: 0 6px 28px #0005 !important;
+}
+#xas-settings-panel {
+  box-sizing: border-box !important;
+  position: fixed !important;
+  inset: 20px 20px 20px auto !important;
+  width: min(620px, calc(100vw - 40px)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border: 1px solid #536259 !important;
+  border-radius: 13px !important;
+  background: #151c18 !important;
+  color: #e7eee9 !important;
+  box-shadow: 0 12px 60px #0009 !important;
+  z-index: 10000 !important;
+  font: 13px/1.4 system-ui, sans-serif !important;
+}
+#xas-settings-panel[hidden], #xas-settings-panel [hidden] { display: none !important; }
+.xas-panel-header { display: flex !important; align-items: center !important; gap: 14px !important; padding: 9px 14px !important; flex-shrink: 0 !important; border-bottom: 1px solid #425447 !important; background: #223429 !important; }
+.xas-panel-header strong { margin-inline-end: auto !important; }
+.xas-panel-header a { color: #bde4c6 !important; font-size: 11px !important; text-decoration: underline !important; }
+.xas-panel-header button { border: 0 !important; background: transparent !important; color: #bed3bf !important; padding: 0 6px !important; font: 24px/1 system-ui, sans-serif !important; cursor: pointer !important; }
+.xas-panel-loading { margin: 0 !important; padding: 8px 14px !important; color: #bed3bf !important; font-size: 11px !important; }
+#xas-settings-panel iframe { display: block !important; width: 100% !important; min-height: 0 !important; flex: 1 !important; border: 0 !important; margin: 0 !important; transform: none !important; }
+#xas-settings-card button:focus-visible, #xas-settings-panel button:focus-visible, #xas-settings-panel a:focus-visible { outline: 2px solid #99d3ad !important; outline-offset: 3px !important; }

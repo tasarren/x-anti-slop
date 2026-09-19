@@ -1,8 +1,29 @@
+# Dependencies and generated output
 node_modules/
-dist/
-artifacts/
-.release/
-web-ext-artifacts/
+/dist/
+/artifacts/
+/.release/
+/web-ext-artifacts/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+*.log
+
+# Local credentials (only sanitized examples may be shared)
 .env
 .env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Caches, operating-system files and editor backups
 .cocoindex_code/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~

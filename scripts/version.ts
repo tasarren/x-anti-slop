@@ -9,7 +9,8 @@ if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg
 export const VERSION = pkg.version;
 
 export function assertReleaseTag(tag: string): void {
-  if (tag !== `v${VERSION}`) throw new Error(`Release tag ${tag} must match package.json: v${VERSION}`);
+  const allowed = new RegExp(`^v${VERSION.replaceAll(".", "\\.")}(?:-rc\\.[1-9]\\d*)?$`);
+  if (!allowed.test(tag)) throw new Error(`Release tag ${tag} must match v${VERSION} or v${VERSION}-rc.N`);
 }
 
 if (process.env["RELEASE_TAG"]) assertReleaseTag(process.env["RELEASE_TAG"]);

@@ -1,0 +1,44 @@
+{
+  "width": 1280,
+  "height": 800,
+  "captureFrames": 812,
+  "outputFrames": 1900,
+  "durationSeconds": 31.666666666666668,
+  "framing": {
+    "fullCanvas": true,
+    "allCaptureFramesVerified": true,
+    "allEncodedMp4FramesVerified": true,
+    "allEncodedWebpFramesVerified": true,
+    "allEncodedGifFramesVerified": true,
+    "browserDevicePixelRatio": 0.26171875,
+    "calibratedRenderZoom": 4.1875,
+    "captureScale": 0.9552238805970149
+  },
+  "motion": {
+    "fps": 60,
+    "segments": 11,
+    "continuousBetweenActions": true,
+    "maxStepPixels": 17.6,
+    "distinctMovingCaptures": 484,
+    "movingCaptures": 487
+  },
+  "source": "Fresh full-canvas recapture of fictional X UI mock, using real extension controls. Correct Grok SVG. No personal timeline data.",
+  "webp": {
+    "width": 1280,
+    "height": 800,
+    "frames": 759,
+    "fullCanvasVerified": true,
+    "motionFrameDurationsMs": [
+      16,
+      17
+    ],
+    "durationSeconds": 31.666
+  },
+  "gifCompatibilityPreview": {
+    "width": 960,
+    "height": 600,
+    "frames": 1583,
+    "fullCanvasVerified": true,
+    "fps": 50
+  }
+}
