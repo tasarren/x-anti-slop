@@ -14,10 +14,14 @@ The demo uses a mock feed with fictional posts.
 
 ## Install
 
-- Firefox Add-ons: not published yet.
-- Chrome Web Store: not published yet.
+- [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/x-anti-slop/): submitted, waiting for review.
+- [Chrome Web Store](https://chromewebstore.google.com/detail/x-anti-slop/eeiaamkmlgpkkiojjicfplcnmdmflapm): submitted, waiting for review.
 
-I'll add the official store links once they're approved. For now, you can build and load the extension locally.
+The store pages may be unavailable until approval. For now, you can build and load the extension locally.
+
+Once Mozilla approves a version, GitHub Actions adds its signed `.xpi` to the [GitHub release](https://github.com/tasarren/x-anti-slop/releases/latest). Download that file, open Firefox's `about:addons`, and choose **Install Add-on From File…** from the gear menu. It stays installed after a restart and receives updates from Firefox Add-ons.
+
+The ZIPs are for development. Chrome users should use the store once it's approved, or follow the **Load unpacked** steps below. A `.crx` download wouldn't bypass Chrome's installation restrictions.
 
 ## Development guide
 

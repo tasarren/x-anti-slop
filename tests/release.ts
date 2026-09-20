@@ -6,9 +6,10 @@ import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
-import { strFromU8, unzipSync } from "fflate";
+import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { assertReleaseTag, VERSION } from "../scripts/version.ts";
 import { publishChrome } from "../scripts/publish-chrome.ts";
+import { signedFirefox } from "../scripts/collect-firefox.ts";
 
 test("release tags, manifests, badge, lockfile and ZIP names agree", async () => {
   assertReleaseTag(`v${VERSION}`);
@@ -113,6 +114,41 @@ test("Chrome HTTP errors fail without disclosing credential-bearing response bod
     assert.equal(error.message.includes("sensitive-server-body"), false);
     return true;
   });
+});
+
+test("Firefox collection waits for approval and rejects changed, unsigned, or untrusted downloads", async () => {
+  const released = await readFile(`artifacts/x-anti-slop-${VERSION}-firefox.zip`);
+  const files = unzipSync(released);
+  const signed = zipSync({ ...files, "META-INF/mozilla.rsa": strToU8("synthetic signature") });
+  const url = "https://addons.mozilla.org/firefox/downloads/file/123/addon.xpi";
+  const metadata = (bytes = signed) => ({
+    version: VERSION, channel: "listed",
+    file: { status: "public", url, size: bytes.length, hash: `sha256:${createHash("sha256").update(bytes).digest("hex")}` },
+  });
+  for (const status of [401, 404]) assert.equal(await signedFirefox(released, VERSION, async () => new Response(null, { status })), null);
+  assert.equal(await signedFirefox(released, VERSION, async () => Response.json({ ...metadata(), file: { status: "unreviewed" } })), null);
+  assert.equal(await signedFirefox(released, VERSION, async () => Response.json({ ...metadata(), is_disabled: true })), null);
+  await assert.rejects(signedFirefox(released, VERSION, async () => new Response(null, { status: 429 })), /429/);
+  const responses = [Response.json(metadata()), new Response(null, { status: 302, headers: { location: "https://addons.cdn.mozilla.net/addon.xpi" } }), new Response(signed)];
+  assert.deepEqual(await signedFirefox(released, VERSION, async () => responses.shift()!), signed);
+  const changed = zipSync({ ...files, "content.js": strToU8("changed code"), "META-INF/mozilla.rsa": strToU8("synthetic signature") });
+  const extra = zipSync({ ...files, "extra.js": strToU8("extra code"), "META-INF/mozilla.rsa": strToU8("synthetic signature") });
+  for (const [info, body] of [
+    [{ ...metadata(), version: "999.0.0" }, signed],
+    [{ ...metadata(), channel: "unlisted" }, signed],
+    [metadata(), changed], // Wrong AMO checksum/size.
+    [metadata(changed), changed], // Valid checksum, different released content.
+    [metadata(extra), extra],
+    [metadata(released), released], // An unsigned ZIP must never become an XPI.
+    [{ ...metadata(), file: { ...metadata().file, url: "https://example.com/addon.xpi" } }, signed],
+  ] as const) {
+    let calls = 0;
+    await assert.rejects(signedFirefox(released, VERSION, async () => ++calls === 1 ? Response.json(info) : new Response(body)));
+  }
+  let calls = 0;
+  await assert.rejects(signedFirefox(released, VERSION, async () => ++calls === 1 ? Response.json(metadata()) :
+    new Response(null, { status: 302, headers: { location: "https://example.com/addon.xpi" } })), /Unexpected Mozilla download host/);
+  assert.equal(calls, 2, "Never follow a redirect to an unrelated host");
 });
 
 test("store checks never submit by default and require the item ID only for a Chrome submission", async () => {
