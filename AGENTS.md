@@ -7,3 +7,4 @@
 - Changes while the version is frozen ship as CI artifacts. Store updates require a new version approved by the user.
 - Run `npm run package` before releasing. Store submission is a separate, manually triggered workflow.
 - The license is MIT. Preserve its notice in source and browser packages.
+- Write documentation in a plain, casual voice. Do not add advertising, marketing copy, slogans, or promotional calls to action.
