@@ -18,7 +18,10 @@ let stored: Record<string, unknown> = {};
 let loaded = false;
 let settings: Settings = { enabled: false, hideAiLabels: false, mode: "placeholder", filters: [] };
 let filters: RegExp[] = [];
-let scheduled = false;
+const matchCache = new Map<string, { matched: boolean; expires: number }>();
+const dirtyPosts = new Set<HTMLElement>();
+let scheduled: number | undefined;
+let launcherDirty = false;
 
 function authorOf(post: HTMLElement): { header: HTMLElement; handle: string } | undefined {
   const header = Array.from(post.querySelectorAll<HTMLElement>(USER)).find(node =>
@@ -136,42 +139,68 @@ function restore(state: HiddenPost): void {
   state.notice.remove();
 }
 
-function scan(): void {
-  scheduled = false;
+function cachedMatch(text: string): boolean {
+  const now = Date.now();
+  const cached = matchCache.get(text);
+  if (cached && cached.expires > now) return cached.matched;
+  const matched = matches(text, filters);
+  // Key by actual text: edits and expanded posts must not inherit a stale ID result.
+  matchCache.delete(text);
+  for (const [key, entry] of matchCache) {
+    if (entry.expires > now && matchCache.size < 500) break;
+    matchCache.delete(key);
+  }
+  matchCache.set(text, { matched, expires: now + 5 * 60_000 });
+  return matched;
+}
+
+function scan(posts?: ReadonlySet<HTMLElement>): void {
+  window.clearTimeout(scheduled);
+  scheduled = undefined;
+  dirtyPosts.clear();
   // Avoid observing our own placeholder insertions and removals.
   observer.disconnect();
   try {
-    syncLauncher();
-    const scopes = new Set(document.querySelectorAll<HTMLElement>(POST));
-    for (const node of document.querySelectorAll(`${TEXT}, ${USER}`)) {
-      const scope = node.closest<HTMLElement>(SCOPE);
-      if (scope?.closest(POST)) scopes.add(scope);
-    }
+    if (!posts || launcherDirty) syncLauncher();
+    launcherDirty = false;
+    const articles = posts ?? new Set(document.querySelectorAll<HTMLElement>(POST));
+    const scopes = new Set<HTMLElement>();
     const aiLabeled = new Set<HTMLElement>();
-    if (settings.hideAiLabels) {
-      // X renders this label as a sparkle SVG beside text, without a dedicated test ID.
-      for (const icon of document.querySelectorAll(`${POST} div > svg[aria-hidden="true"]`)) {
-        const label = icon.parentElement!;
-        if (label.textContent?.trim() !== "Made with AI" || label.closest(USER)) continue;
-        const scope = label.closest<HTMLElement>(SCOPE);
-        const text = label.closest(TEXT);
-        if (!scope || (text && ownerOf(text, scopes) === scope)) continue;
-        scopes.add(scope); // Include media-only quotes that have no tweetText node.
-        aiLabeled.add(scope);
+    for (const article of articles) {
+      if (!article.isConnected || !article.matches(POST)) continue;
+      scopes.add(article);
+      for (const node of article.querySelectorAll(`${TEXT}, ${USER}`)) {
+        const scope = node.closest<HTMLElement>(SCOPE);
+        if (scope?.closest(POST)) scopes.add(scope);
+      }
+      if (settings.hideAiLabels) {
+        // X renders this label as a sparkle SVG beside text, without a dedicated test ID.
+        for (const icon of article.querySelectorAll('div > svg[aria-hidden="true"]')) {
+          const label = icon.parentElement!;
+          if (label.textContent?.trim() !== "Made with AI" || label.closest(USER)) continue;
+          const scope = label.closest<HTMLElement>(SCOPE);
+          const text = label.closest(TEXT);
+          if (!scope || (text && ownerOf(text, scopes) === scope)) continue;
+          scopes.add(scope); // Include media-only quotes that have no tweetText node.
+          aiLabeled.add(scope);
+        }
       }
     }
     for (const [post, state] of hiddenPosts) {
-      if (!post.isConnected || !scopes.has(post)) {
+      const article = outerArticle(post);
+      if (!post.isConnected || !post.closest(POST) || ((!posts || (article && posts.has(article))) && !scopes.has(post))) {
         restore(state);
         hiddenPosts.delete(post);
       }
     }
-    // ponytail: scan only X's mounted posts per mutation batch; use dirty-post tracking if this becomes costly.
     for (const post of scopes) {
       const quoted = !post.matches(POST) || Boolean(post.parentElement?.closest(POST));
       const author = authorOf(post);
+      // X stacks the opened post's name and handle; its first div is the name row
+      // in both that layout and timeline/quote headers. Keep buttons outside links.
+      const buttonRow = author?.header.querySelector<HTMLElement>(":scope > div") ?? author?.header;
       let button = authorButtons.get(post);
-      if (button && (!author || button.parentElement !== author.header)) {
+      if (button && (!author || button.parentElement !== buttonRow)) {
         button.remove();
         authorButtons.delete(post);
         button = undefined;
@@ -179,7 +208,7 @@ function scan(): void {
       if (author) {
         if (!button) {
           button = accountButton(post, author.handle, true);
-          author.header.append(button);
+          buttonRow!.append(button);
           authorButtons.set(post, button);
         }
         paintAccountButton(button, author.handle);
@@ -197,7 +226,7 @@ function scan(): void {
         hiddenPosts.delete(post);
         state = undefined;
       }
-      if (!settings.enabled || (author && whitelisted.has(author.handle)) || !(hasAiLabel || (text && matches(text, filters)))) {
+      if (!settings.enabled || (author && whitelisted.has(author.handle)) || !(hasAiLabel || (text && filters.length && cachedMatch(text)))) {
         if (state) restore(state);
         hiddenPosts.delete(post);
         continue;
@@ -254,15 +283,49 @@ function scan(): void {
 }
 
 function scheduleScan(): void {
-  if (!scheduled) {
-    scheduled = true;
-    window.setTimeout(scan, 40);
+  if (scheduled === undefined) {
+    scheduled = window.setTimeout(() => scan(new Set(dirtyPosts)), 40);
   }
 }
-const observer = new MutationObserver(scheduleScan);
-window.addEventListener("resize", scheduleScan);
+
+function outerArticle(node: Element): HTMLElement | null {
+  let post = node.closest<HTMLElement>("article");
+  if (!post) return null;
+  for (let parent = post.parentElement?.closest<HTMLElement>(POST); parent; parent = post.parentElement?.closest<HTMLElement>(POST)) post = parent;
+  return post;
+}
+
+function markPost(node: Element): boolean {
+  const post = outerArticle(node);
+  if (!post) return false;
+  dirtyPosts.add(post);
+  return true;
+}
+
+const observer = new MutationObserver(records => {
+  for (const record of records) {
+    const target = record.target instanceof Element ? record.target : record.target.parentElement;
+    if (target && markPost(target)) continue;
+    if (record.type !== "childList" && record.attributeName !== "data-testid") continue;
+    launcherDirty = true;
+    // A cell can contain multiple posts. Recheck its siblings if X replaces one.
+    const cell = target?.closest(ROW);
+    if (cell) for (const post of cell.querySelectorAll(POST)) markPost(post);
+    for (const node of record.addedNodes) {
+      if (!(node instanceof Element)) continue;
+      if (node.matches(POST)) markPost(node);
+      for (const post of node.querySelectorAll(POST)) markPost(post);
+    }
+  }
+  if (dirtyPosts.size || launcherDirty) scheduleScan();
+});
+window.addEventListener("resize", () => {
+  launcherDirty = true;
+  scheduleScan();
+});
 
 function apply(value: unknown): void {
+  matchCache.clear();
   try {
     const next = parseSettings(value);
     const compiled = compileFilters(next);

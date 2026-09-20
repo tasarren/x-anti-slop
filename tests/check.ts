@@ -165,6 +165,77 @@ test("a slow initial storage read cannot overwrite newer preferences", async t =
   assert.equal(p.document.querySelectorAll("[data-xas-mode]").length, 0);
 });
 
+test("whitelist stars share the name row in opened posts, replies and quotes", async t => {
+  const header = '<div data-testid="User-Name" style="display:flex;flex-direction:column"><div class="name-row" style="display:flex;align-items:center"><div><a href="/author" role="link">Author</a></div></div><div><a href="/author" role="link">@author</a></div></div>';
+  const p = page(`<style>${css}</style><article data-testid="tweet">${header}<div data-testid="tweetText">Ordinary text</div>${quote("cited", "Ordinary quote").replace(/<div data-testid="User-Name">.*?<\/div>/, header)}</article><article data-testid="tweet">${header.replace("flex-direction:column", "flex-direction:row")}<div data-testid="tweetText">Reply</div></article>`);
+  t.after(() => p.dom.window.close());
+  p.run(content);
+  await until(() => p.document.querySelectorAll(".name-row > .xas-whitelist").length === 3);
+  for (const button of p.document.querySelectorAll<HTMLElement>(".xas-whitelist-icon")) {
+    assert.equal(button.closest("a"), null, "Never nest the star inside a profile link");
+    assert.equal(p.window.getComputedStyle(button).alignSelf, "center");
+    assert.equal(p.window.getComputedStyle(button).height, "20px");
+  }
+  const row = p.document.querySelector(".name-row")!;
+  row.innerHTML = '<div><a href="/replacement" role="link">Replacement</a></div>';
+  await until(() => row.querySelector("button")?.getAttribute("data-xas-account") === "replacement");
+  assert.equal(row.querySelectorAll("button").length, 1);
+});
+
+test("mutation batches only read changed posts; resize and unrelated UI do not run filters", async t => {
+  const settings = { ...DEFAULT_SETTINGS, filters: [{ pattern: "FILTER_TARGET", flags: "g", enabled: true }] };
+  const p = page('<nav><button data-testid="AppTabBar_More_Menu">More</button></nav><aside id="sidebar"></aside>' + Array.from({ length: 100 }, (_, i) => post(`p${i}`, `Post ${i}`)).join(""), settings);
+  t.after(() => p.dom.window.close());
+  p.run(`var work = { regex: 0, text: 0, layout: 0 };
+    var nativeTest = RegExp.prototype.test;
+    RegExp.prototype.test = function(text) { if (this.source === 'FILTER_TARGET') work.regex++; return nativeTest.call(this, text); };
+    var nativeQuery = Element.prototype.querySelectorAll;
+    Element.prototype.querySelectorAll = function(selector) { if (selector === '[data-testid="tweetText"]') work.text++; return nativeQuery.call(this, selector); };
+    document.querySelector('nav button').getBoundingClientRect = () => { work.layout++; return { width: 260 }; };`);
+  p.run(content);
+  await until(() => p.document.querySelectorAll(".xas-whitelist-icon").length === 100);
+  assert.equal(p.run("work.regex"), 100);
+  p.run("work.regex = work.text = work.layout = 0");
+  for (let i = 0; i < 100; i++) p.window.dispatchEvent(new p.window.Event("resize"));
+  p.document.getElementById("sidebar")!.textContent = "New sidebar item";
+  await delay(100);
+  assert.equal(p.run("work.regex"), 0);
+  assert.equal(p.run("work.text"), 0);
+  assert.equal(p.run("work.layout"), 1, "Resize bursts share one launcher update");
+  p.run("work.layout = 0");
+  for (let i = 0; i < 100; i++) p.document.querySelector("#p0 time")!.textContent = `${i}m`;
+  await delay(100);
+  assert.equal(p.run("work.text"), 1, "Read the changed post once, not the other 99 posts");
+  assert.equal(p.run("work.regex"), 0, "An unchanged body reuses the regex result");
+  assert.equal(p.run("work.layout"), 0, "Post changes do not measure the navigation rail");
+  p.document.querySelector('#p0 [data-testid="tweetText"]')!.textContent = "FILTER_TARGET edited";
+  await until(() => p.document.getElementById("p0")!.hasAttribute("data-xas-mode"));
+  assert.equal(p.run("work.regex"), 1, "Edits invalidate immediately");
+  p.document.body.insertAdjacentHTML("beforeend", post("rerender", "FILTER_TARGET edited"));
+  await until(() => p.document.getElementById("rerender")!.hasAttribute("data-xas-mode"));
+  assert.equal(p.run("work.regex"), 1, "Remounted text reuses the cached result");
+  p.update({ ...settings, filters: [] });
+  assert.equal(p.document.querySelectorAll("[data-xas-mode]").length, 0, "Changing filters invalidates cached matches");
+});
+
+test("regex cache expires and stays bounded during long scrolling sessions", async t => {
+  const p = page(post("old", "FILTER_TARGET oldest"), { ...DEFAULT_SETTINGS, filters: [{ pattern: "FILTER_TARGET", flags: "", enabled: true }] });
+  t.after(() => p.dom.window.close());
+  p.run(`var checks = 0, now = 1000; Date.now = () => now;
+    var nativeTest = RegExp.prototype.test;
+    RegExp.prototype.test = function(text) { if (this.source === 'FILTER_TARGET') checks++; return nativeTest.call(this, text); };`);
+  p.run(content);
+  await until(() => p.document.getElementById("old")!.hasAttribute("data-xas-mode"));
+  p.run("now += 5 * 60_000 + 1");
+  p.document.querySelector("time")!.textContent = "Later";
+  await until(() => p.run("checks") === 2);
+  p.document.body.insertAdjacentHTML("beforeend", Array.from({ length: 500 }, (_, i) => post(`new${i}`, `Unique ${i}`)).join(""));
+  await until(() => p.run("checks") === 502);
+  p.document.querySelector("#old time")!.textContent = "Later again";
+  await until(() => p.run("checks") === 503);
+  assert.equal(p.document.getElementById("old")!.getAttribute("data-xas-mode"), "placeholder");
+});
+
 test("AI labels are optional, independent of regexes, and follow reveal, removal and pause settings", async t => {
   const p = page(post("labeled", "A photo") + post("words", "Made with AI") + post("inline", aiLabel) + post("media", "") + post("ordinary", "No label"));
   t.after(() => p.dom.window.close());
@@ -465,8 +536,9 @@ test("a quote match hides only its card, can be revealed, and never contaminates
   assert.equal(parent.hasAttribute("data-xas-mode"), false);
   cited.querySelector('[data-testid="tweetText"]')!.textContent = "Edited — citation";
   await until(() => cited.hasAttribute("data-xas-quote-hidden"));
-  cited.remove();
+  p.document.body.append(cited);
   await until(() => !parent.querySelector(".xas-quote-notice"));
+  assert.equal(cited.hasAttribute("data-xas-quote-hidden"), false, "Moving a quote outside a post restores its content");
   assert.equal(parent.hasAttribute("data-xas-mode"), false);
 });
 

@@ -52,6 +52,8 @@ The editor is an extension-origin iframe loading `options.html?embedded=1`. Only
 
 The content script reads `article[data-testid="tweet"]` and `[data-testid="tweetText"]`, then collapses `[data-testid="cellInnerDiv"]` for whole-post matches where safe. Quoted cards (X's nested link containers, explicit quote containers, blockquotes or nested tweet articles) are separate text and author scopes. Never include a quote's text in its parent's match. Quote notices sit outside the clickable quote, and the original card stays in the DOM for restoration. X's quote headers often expose handles through avatar test IDs and spans rather than profile links. Recheck these boundaries against current markup before changing them.
 
+Mutation events are batched for 40 ms and only changed articles are scanned. Resize events update the launcher without reading post bodies. Regex results are cached by exact text for five minutes, with at most 500 entries per tab; expired entries are discarded when the cache is used, without a background timer. Changing settings clears the cache, and edited or expanded text gets a fresh check. Whitelist and AI-label decisions stay outside that cache. The star sits in the header's name row so opened posts can keep their handle on a separate line.
+
 ## Ignored files and packages
 
 `.gitignore` covers dependencies, builds, release downloads, logs, caches, credentials, and common OS/editor debris. `.git/info/exclude` is for personal notes, local editor folders and agent workspaces; it stays on your machine. Check a rule with `git check-ignore -v path/to/file`.
