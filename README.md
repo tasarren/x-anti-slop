@@ -2,7 +2,9 @@
 
 A small TypeScript browser extension that hides posts on X when their text matches one of your regular expressions. Built for current Chromium browsers (Chrome, Edge, Brave, Vivaldi, Opera, etc.) and Firefox browsers with Manifest V3 support.
 
-**Download releases** · Report a bug · [Contribute](CONTRIBUTING.md) · [Development](docs/DEVELOPMENT.md) · [Store setup](docs/STORE_SETUP.md) · [Privacy](docs/PRIVACY.md)
+Get builds from this repository's **Actions** or **Releases** pages. Report bugs under **Issues**.
+
+[Contribute](CONTRIBUTING.md) · [Development](docs/DEVELOPMENT.md) · [Store setup](docs/STORE_SETUP.md) · [Privacy](docs/PRIVACY.md)
 
 Version: **0.1.0** · License: **[MIT](LICENSE)**. Official store listings are not live yet. GitHub ZIPs use the developer installation steps below.
 

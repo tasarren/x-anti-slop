@@ -8,4 +8,4 @@ Removing the extension removes its locally stored preferences according to your 
 
 Browser stores and GitHub may process information under their own policies when you download or install the extension. X continues to operate under its own policies while you use its website.
 
-Questions can be raised through the project issue tracker.
+Questions can be raised through this repository's **Issues** tab.

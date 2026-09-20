@@ -18,6 +18,9 @@ coverage/
 *.key
 *.p12
 *.pfx
+/client_secret*.json
+/credentials*.json
+/service-account*.json
 
 # Caches, operating-system files and editor backups
 .cocoindex_code/

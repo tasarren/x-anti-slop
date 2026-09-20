@@ -2,6 +2,8 @@
 
 Use Git, Node **24** (the CI version), and npm. The package supports Node 22.18+, but using Node 24 avoids toolchain differences.
 
+Replace `REPOSITORY_URL` with this repository's clone URL or your fork's clone URL.
+
 ```sh
 git clone REPOSITORY_URL x-anti-slop
 cd x-anti-slop
@@ -10,6 +12,8 @@ npm run package
 ```
 
 For contributions, clone your fork instead and create a feature branch. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+Before committing, choose the author name and email you intend to make public. Git records both author and committer details in history. A GitHub no-reply address can keep a personal mailbox private; changing Git configuration only affects future commits.
 
 ## Commands and browser testing
 

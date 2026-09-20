@@ -1,6 +1,6 @@
 # Security
 
-Please report exploitable vulnerabilities through GitHub's private vulnerability reporting. Do not put credentials, private timeline content, or working exploits in public issues.
+Please report exploitable vulnerabilities through this repository's **Security → Report a vulnerability** page. Do not put credentials, private timeline content, or working exploits in public issues.
 
 Include the affected version, browser, reproduction steps using synthetic data, impact, and a minimal proof of concept when safe. Coordinate public disclosure with the maintainer. There is no guaranteed response deadline or paid bounty.
 

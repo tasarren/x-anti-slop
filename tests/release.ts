@@ -65,6 +65,15 @@ test("source packaging honors shared/local ignores and skips deleted files and s
   for (const path of ["docs/private.pem", "notes.local.md", "docs/link.md", "deleted.md"]) assert.equal(source[path], undefined, path);
 });
 
+test("public documentation does not embed email addresses or machine home paths", async () => {
+  const paths = execFileSync('git', ['ls-files', '-z', '*.md', 'LICENSE'], { encoding:'utf8' }).split('\0').filter(Boolean);
+  for (const path of paths) {
+    const text = await readFile(path, 'utf8');
+    assert.doesNotMatch(text, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i, `${path} contains a literal email address`);
+    assert.doesNotMatch(text, /\/(?:home|Users)\/[^\s/]+/, `${path} contains a machine-specific home path`);
+  }
+});
+
 const credentials = { publisherId: "publisher", extensionId: "extension", clientId: "client", clientSecret: "secret", refreshToken: "refresh" };
 const zip = new Uint8Array([80, 75]);
 

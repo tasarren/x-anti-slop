@@ -1,5 +1,7 @@
 # First store publication
 
+This guide applies to any maintainer preparing the extension for the stores. Run GitHub CLI commands from the repository checkout so they use its configured remote. In listing URLs below, replace `REPOSITORY_URL` with the repository's public HTTPS URL. Keep personal account details and setup progress in private notes rather than this guide.
+
 ## Prepared materials
 
 | Material | Location |
