@@ -74,6 +74,9 @@ function quote(handle: string, text: string, id = `quote-${handle}`): string {
   return `<div id="${id}" role="link" tabindex="0"><div><div data-testid="UserAvatar-Container-${handle}"></div><div data-testid="User-Name"><span>Quoted author</span><span>@${handle}</span><time datetime="2026-09-19T12:00:00Z">Today</time></div><div data-testid="tweetText">${text}</div></div></div>`;
 }
 
+// X's English label has no test ID: a decorative SVG, a space, then the label span.
+const aiLabel = '<div class="ai-label"><div dir="ltr"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0v24"/></svg><span> </span><span>Made with AI</span></div></div>';
+
 test("default regex, custom flags, invalid input and empty filter lists", () => {
   const defaults = compileFilters(DEFAULT_SETTINGS);
   for (const symbol of ["—", "«", "»"]) assert.ok(matches(`before${symbol}after`, defaults));
@@ -81,6 +84,10 @@ test("default regex, custom flags, invalid input and empty filter lists", () => 
   assert.deepEqual(parseSettings(undefined), DEFAULT_SETTINGS);
   const empty = parseSettings({ enabled: true, mode: "remove", filters: [] });
   assert.equal(matches("—", compileFilters(empty)), false);
+  assert.equal(empty.hideAiLabels, false, "Existing settings leave label filtering off");
+  assert.equal(DEFAULT_SETTINGS.hideAiLabels, false);
+  assert.equal(parseSettings({ ...DEFAULT_SETTINGS, hideAiLabels: true }).hideAiLabels, true);
+  assert.throws(() => parseSettings({ ...DEFAULT_SETTINGS, hideAiLabels: "true" }));
   assert.throws(() => parseSettings(null));
   assert.throws(() => parseSettings({ ...DEFAULT_SETTINGS, filters: [{}] }));
   assert.throws(() => compileFilter({ pattern: "[", flags: "", enabled: true }));
@@ -135,7 +142,7 @@ test("new, edited, quoted and recycled posts; reveal; removal; restoration", asy
 });
 
 test("Firefox API, emoji alt text, line breaks, and posts without a timeline cell", async t => {
-  const settings: Settings = { enabled: true, mode: "placeholder", filters: [{ pattern: "🦊|^second$", flags: "mu", enabled: true }] };
+  const settings: Settings = { ...DEFAULT_SETTINGS, filters: [{ pattern: "🦊|^second$", flags: "mu", enabled: true }] };
   const p = page(`${post("emoji", '<img alt="🦊" src="fox.png">')}${post("lines", "first<br>second")}<article id="standalone" data-testid="tweet"><div data-testid="tweetText">🦊</div></article>`, settings, true);
   t.after(() => p.dom.window.close());
   p.run(content);
@@ -156,6 +163,93 @@ test("a slow initial storage read cannot overwrite newer preferences", async t =
   finishLoading(DEFAULT_SETTINGS);
   await delay(30);
   assert.equal(p.document.querySelectorAll("[data-xas-mode]").length, 0);
+});
+
+test("AI labels are optional, independent of regexes, and follow reveal, removal and pause settings", async t => {
+  const p = page(post("labeled", "A photo") + post("words", "Made with AI") + post("inline", aiLabel) + post("media", "") + post("ordinary", "No label"));
+  t.after(() => p.dom.window.close());
+  const row = p.document.getElementById("labeled")!;
+  row.querySelector("article")!.insertAdjacentHTML("beforeend", aiLabel);
+  const media = p.document.getElementById("media")!;
+  media.querySelector('[data-testid="tweetText"]')!.remove();
+  media.querySelector("article")!.insertAdjacentHTML("beforeend", aiLabel);
+  p.run(content);
+  await until(() => !!row.querySelector(".xas-whitelist"));
+  assert.equal(p.document.querySelectorAll("[data-xas-mode]").length, 0);
+  const settings = { ...DEFAULT_SETTINGS, hideAiLabels: true, filters: [] };
+  p.update(settings);
+  assert.equal(row.getAttribute("data-xas-mode"), "placeholder");
+  assert.equal(media.getAttribute("data-xas-mode"), "placeholder", "Media-only posts need no text");
+  for (const id of ["words", "inline", "ordinary"]) assert.equal(p.document.getElementById(id)!.hasAttribute("data-xas-mode"), false);
+  row.querySelector<HTMLButtonElement>('.xas-notice button[aria-label="Show this hidden post"]')!.click();
+  assert.equal(row.hasAttribute("data-xas-mode"), false);
+  p.document.body.append(p.document.createElement("div"));
+  await delay(60);
+  assert.equal(row.hasAttribute("data-xas-mode"), false, "Show survives unrelated changes");
+  row.querySelector(".ai-label")!.remove();
+  await delay(60);
+  row.querySelector("article")!.insertAdjacentHTML("beforeend", aiLabel);
+  await until(() => row.hasAttribute("data-xas-mode"));
+  media.querySelector(".ai-label")!.remove();
+  await until(() => !media.hasAttribute("data-xas-mode"));
+  p.update({ ...settings, mode: "remove" });
+  assert.equal(row.getAttribute("data-xas-mode"), "remove");
+  p.update({ ...settings, hideAiLabels: false });
+  assert.equal(p.document.querySelectorAll("[data-xas-mode]").length, 0);
+  p.update(settings);
+  p.update({ ...settings, enabled: false });
+  assert.equal(p.document.querySelectorAll("[data-xas-mode]").length, 0);
+});
+
+test("AI-labeled quotes use their own scope and author's whitelist, including media-only quotes", async t => {
+  const settings = { ...DEFAULT_SETTINGS, hideAiLabels: true, filters: [] };
+  const p = page(post("trusted", "My comment" + quote("cited", "")) + post("parent", "Another comment" + quote("trusted", "")), settings, true, ["trusted"]);
+  t.after(() => p.dom.window.close());
+  for (const id of ["quote-cited", "quote-trusted"]) {
+    const card = p.document.getElementById(id)!;
+    card.querySelector('[data-testid="tweetText"]')!.remove();
+    card.insertAdjacentHTML("beforeend", aiLabel);
+  }
+  p.document.getElementById("trusted")!.querySelector("article")!.insertAdjacentHTML("beforeend", aiLabel);
+  p.run(content);
+  const cited = p.document.getElementById("quote-cited")!;
+  await until(() => cited.hasAttribute("data-xas-quote-hidden"));
+  for (const id of ["trusted", "parent", "quote-trusted"]) assert.equal(p.document.getElementById(id)!.hasAttribute("data-xas-mode"), false);
+  cited.previousElementSibling!.querySelector<HTMLButtonElement>(".xas-whitelist")!.click();
+  await until(() => !cited.hasAttribute("data-xas-mode"));
+  assert.ok(p.accounts().has("cited"));
+  p.updateAccounts({ "whitelist:cited": undefined });
+  await until(() => cited.hasAttribute("data-xas-mode"));
+  p.update({ ...settings, mode: "remove" });
+  assert.equal(cited.getAttribute("data-xas-mode"), "remove");
+  assert.equal(p.document.getElementById("trusted")!.hasAttribute("data-xas-mode"), false);
+  p.update({ ...settings, hideAiLabels: false });
+  p.updateAccounts({ "whitelist:cited": true });
+  assert.equal(cited.querySelector(".xas-whitelist")!.getAttribute("aria-pressed"), "true", "Media-only quotes retain working whitelist controls while label filtering is off");
+});
+
+test("the AI-label switch defaults off, saves, reloads and resets without losing existing filters", async t => {
+  const legacy = { enabled: true, mode: "remove", filters: [{ pattern: "custom", flags: "i", enabled: true }] };
+  const p = page(optionsHtml, legacy);
+  t.after(() => p.dom.window.close());
+  p.run(options);
+  const toggle = p.document.querySelector<HTMLInputElement>("#hide-ai-labels")!;
+  const save = p.document.querySelector<HTMLButtonElement>("#save")!;
+  await until(() => !save.disabled);
+  assert.equal(toggle.checked, false);
+  toggle.click();
+  assert.equal(p.document.getElementById("status")!.textContent, "Unsaved changes");
+  save.click();
+  await until(() => p.document.getElementById("status")!.textContent === "Saved. Applied to X.");
+  assert.deepEqual(JSON.parse(JSON.stringify(p.saved())), { settings: { ...legacy, hideAiLabels: true } });
+  const reloaded = page(optionsHtml, { ...legacy, hideAiLabels: true }, true);
+  t.after(() => reloaded.dom.window.close());
+  reloaded.run(options);
+  await until(() => !reloaded.document.querySelector<HTMLButtonElement>("#save")!.disabled);
+  assert.equal(reloaded.document.querySelector<HTMLInputElement>("#hide-ai-labels")!.checked, true);
+  reloaded.document.querySelector<HTMLButtonElement>("#reset")!.click();
+  assert.equal(reloaded.document.querySelector<HTMLInputElement>("#hide-ai-labels")!.checked, false);
+  assert.equal(reloaded.saved(), undefined, "Reset remains a draft until saved");
 });
 
 test("options validate drafts, test matches, save, and preserve drafts on failure", async t => {
@@ -180,7 +274,7 @@ test("options validate drafts, test matches, save, and preserve drafts on failur
   assert.equal(p.document.getElementById("test-result")!.textContent, "This post would be hidden.");
   form.dispatchEvent(new p.window.Event("submit", { cancelable: true }));
   await until(() => status.textContent === "Saved. Applied to X.");
-  assert.deepEqual(JSON.parse(JSON.stringify(p.saved())), { settings: { enabled: true, mode: "placeholder", filters: [{ pattern: "spam", flags: "u", enabled: true }] } });
+  assert.deepEqual(JSON.parse(JSON.stringify(p.saved())), { settings: { ...DEFAULT_SETTINGS, filters: [{ pattern: "spam", flags: "u", enabled: true }] } });
   p.failSave();
   input.value = "updated";
   input.dispatchEvent(new p.window.Event("input", { bubbles: true }));

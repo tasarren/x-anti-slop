@@ -16,7 +16,7 @@ const failedAccounts = new Set<string>();
 let whitelisted = new Set<string>();
 let stored: Record<string, unknown> = {};
 let loaded = false;
-let settings: Settings = { enabled: false, mode: "placeholder", filters: [] };
+let settings: Settings = { enabled: false, hideAiLabels: false, mode: "placeholder", filters: [] };
 let filters: RegExp[] = [];
 let scheduled = false;
 
@@ -143,9 +143,22 @@ function scan(): void {
   try {
     syncLauncher();
     const scopes = new Set(document.querySelectorAll<HTMLElement>(POST));
-    for (const text of document.querySelectorAll(TEXT)) {
-      const scope = text.closest<HTMLElement>(SCOPE);
+    for (const node of document.querySelectorAll(`${TEXT}, ${USER}`)) {
+      const scope = node.closest<HTMLElement>(SCOPE);
       if (scope?.closest(POST)) scopes.add(scope);
+    }
+    const aiLabeled = new Set<HTMLElement>();
+    if (settings.hideAiLabels) {
+      // X renders this label as a sparkle SVG beside text, without a dedicated test ID.
+      for (const icon of document.querySelectorAll(`${POST} div > svg[aria-hidden="true"]`)) {
+        const label = icon.parentElement!;
+        if (label.textContent?.trim() !== "Made with AI" || label.closest(USER)) continue;
+        const scope = label.closest<HTMLElement>(SCOPE);
+        const text = label.closest(TEXT);
+        if (!scope || (text && ownerOf(text, scopes) === scope)) continue;
+        scopes.add(scope); // Include media-only quotes that have no tweetText node.
+        aiLabeled.add(scope);
+      }
     }
     for (const [post, state] of hiddenPosts) {
       if (!post.isConnected || !scopes.has(post)) {
@@ -172,18 +185,19 @@ function scan(): void {
         paintAccountButton(button, author.handle);
       }
       const text = postText(post, scopes);
+      const hasAiLabel = aiLabeled.has(post);
       const cell = post.closest<HTMLElement>(ROW);
       const onlyPost = cell && Array.from(cell.querySelectorAll(POST)).filter(node => !node.parentElement?.closest(POST)).length === 1;
       const root = !quoted && onlyPost ? cell : post;
       const time = Array.from(post.querySelectorAll("time")).find(node => ownerOf(node, scopes) === post);
-      const identity = (author?.handle ?? "") + "\n" + (post.getAttribute("href") ?? time?.closest("a")?.getAttribute("href") ?? time?.getAttribute("datetime") ?? "") + "\n" + text;
+      const identity = (author?.handle ?? "") + "\n" + (post.getAttribute("href") ?? time?.closest("a")?.getAttribute("href") ?? time?.getAttribute("datetime") ?? "") + "\n" + text + "\n" + hasAiLabel;
       let state = hiddenPosts.get(post);
       if (state && (state.identity !== identity || state.root !== root)) {
         restore(state);
         hiddenPosts.delete(post);
         state = undefined;
       }
-      if (!settings.enabled || (author && whitelisted.has(author.handle)) || !text || !matches(text, filters)) {
+      if (!settings.enabled || (author && whitelisted.has(author.handle)) || !(hasAiLabel || (text && matches(text, filters)))) {
         if (state) restore(state);
         hiddenPosts.delete(post);
         continue;
@@ -255,7 +269,7 @@ function apply(value: unknown): void {
     settings = next;
     filters = compiled;
   } catch (error) {
-    settings = { enabled: false, mode: "placeholder", filters: [] };
+    settings = { enabled: false, hideAiLabels: false, mode: "placeholder", filters: [] };
     filters = [];
     console.warn("X-Anti-Slop: filtering paused because settings are invalid.", error);
   }

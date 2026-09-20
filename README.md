@@ -62,6 +62,10 @@ Open the settings card on X, add a pattern, and click **Save changes**. On narro
 
 By default, matching posts leave a small notice. Click **Show** to read one, or choose **Hide it completely** in settings to remove the row.
 
+You can also turn on **Hide posts labeled “Made with AI”**. It's off by default and works independently of your regex list. It checks X's label, not mentions of those words in a post. The whitelist still applies, and a labeled quote is hidden separately from the post quoting it.
+
+The label toggle is in development builds. It isn't in the submitted 0.1.0 release.
+
 The default pattern looks for an em dash or either guillemet:
 
 ```regex

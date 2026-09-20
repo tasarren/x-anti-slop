@@ -1,5 +1,5 @@
 export type Filter = { pattern: string; flags: string; enabled: boolean };
-export type Settings = { enabled: boolean; mode: "placeholder" | "remove"; filters: Filter[] };
+export type Settings = { enabled: boolean; hideAiLabels: boolean; mode: "placeholder" | "remove"; filters: Filter[] };
 
 export const WHITELIST_PREFIX = "whitelist:";
 
@@ -27,6 +27,7 @@ export function parseWhitelist(storage: Record<string, unknown>): Set<string> {
 
 export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
+  hideAiLabels: false,
   mode: "placeholder",
   filters: [{ pattern: ".?[—«»].?", flags: "u", enabled: true }],
 };
@@ -35,6 +36,7 @@ export function parseSettings(value: unknown): Settings {
   if (value === undefined) return structuredClone(DEFAULT_SETTINGS);
   if (typeof value !== "object" || value === null ||
       !("enabled" in value) || typeof value.enabled !== "boolean" ||
+      ("hideAiLabels" in value && typeof value.hideAiLabels !== "boolean") ||
       !("mode" in value) || (value.mode !== "placeholder" && value.mode !== "remove") ||
       !("filters" in value) || !Array.isArray(value.filters)) {
     throw new Error("Saved settings could not be read. Open X-Anti-Slop to reset them.");
@@ -48,7 +50,8 @@ export function parseSettings(value: unknown): Settings {
     }
     return { pattern: filter.pattern, flags: filter.flags, enabled: filter.enabled };
   });
-  return { enabled: value.enabled, mode: value.mode, filters };
+  // Older saved settings keep this optional filter off.
+  return { enabled: value.enabled, hideAiLabels: "hideAiLabels" in value && value.hideAiLabels === true, mode: value.mode, filters };
 }
 
 export function compileFilter(filter: Filter): RegExp {
