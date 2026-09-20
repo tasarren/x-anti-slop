@@ -20,6 +20,10 @@
           <label for="enabled"><strong>Filter posts on X</strong><span>Changes apply to your open timelines when saved.</span></label>
           <input id="enabled" type="checkbox" role="switch">
         </section>
+        <section class="power">
+          <label for="hide-ai-labels"><strong>Hide posts labeled “Made with AI”</strong><span>Off by default. Whitelisted accounts stay visible.</span></label>
+          <input id="hide-ai-labels" type="checkbox" role="switch">
+        </section>
         <section class="panel">
           <div class="section-title"><div><h2>Your filters</h2><p>A post is hidden when any enabled pattern matches.</p></div><span id="filter-count" class="count">0</span></div>
           <div id="filters"></div>
@@ -34,7 +38,7 @@
           </div>
         </section>
         <section class="panel tester">
-          <label for="sample"><h2>Try your filters</h2></label>
+          <label for="sample"><h2>Try your regex filters</h2></label>
           <textarea id="sample" rows="2" placeholder="Paste some post text to test your current filters…"></textarea>
           <p id="test-result" aria-live="polite">Try a sentence before you save.</p>
         </section>

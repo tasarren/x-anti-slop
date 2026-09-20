@@ -20,6 +20,7 @@ const controls = document.querySelector<HTMLFieldSetElement>("#controls")!;
 const list = document.querySelector<HTMLDivElement>("#filters")!;
 const template = document.querySelector<HTMLTemplateElement>("#filter-template")!;
 const enabled = document.querySelector<HTMLInputElement>("#enabled")!;
+const hideAiLabels = document.querySelector<HTMLInputElement>("#hide-ai-labels")!;
 const sample = document.querySelector<HTMLTextAreaElement>("#sample")!;
 const result = document.querySelector<HTMLParagraphElement>("#test-result")!;
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
@@ -123,6 +124,7 @@ function readFilter(row: HTMLDivElement): Filter {
 function readForm(): Settings {
   return {
     enabled: enabled.checked,
+    hideAiLabels: hideAiLabels.checked,
     mode: form.querySelector<HTMLInputElement>('input[name="mode"]:checked')?.value === "remove" ? "remove" : "placeholder",
     filters: rows().map(readFilter),
   };
@@ -177,6 +179,7 @@ function addFilter(filter: Filter): HTMLDivElement {
 
 function render(settings: Settings): void {
   enabled.checked = settings.enabled;
+  hideAiLabels.checked = settings.hideAiLabels;
   form.querySelector<HTMLInputElement>(`input[value="${settings.mode}"]`)!.checked = true;
   list.replaceChildren();
   settings.filters.forEach(addFilter);
