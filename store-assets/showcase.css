@@ -2,3 +2,10 @@
 
 /* Keep the captured artboard stationary when focusing controls in the popup. */
 html,body{overflow:hidden}#artboard{position:fixed;inset:0 auto auto 0}
+
+/* Reserve the caption strip in media captures; the card and editor are production UI. */
+.nav-row{height:48px}
+#xas-settings-panel{left:640px!important;right:auto!important;top:20px!important;bottom:auto!important;width:620px!important;height:690px!important}
+#cursor{position:fixed;z-index:10002}
+#click-ring{position:fixed;z-index:10001}
+.quoted-post{border:1px solid #2f3336;border-radius:14px;margin-top:12px;padding:12px}

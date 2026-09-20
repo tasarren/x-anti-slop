@@ -1,44 +1,64 @@
 {
   "width": 1280,
   "height": 800,
-  "captureFrames": 812,
-  "outputFrames": 1900,
-  "durationSeconds": 31.666666666666668,
+  "fps": 60,
+  "captureFrames": 391,
+  "outputFrames": 2819,
+  "durationSeconds": 46.983333333333334,
+  "launcher": "Left navigation, between More and Post",
+  "source": "Fictional X mock with the production extension bundles",
+  "motion": {
+    "easing": "quintic ease-in-out",
+    "sampleRate": 60,
+    "movingFrames": 975,
+    "cursorComposited": true,
+    "maxStepPixels": 44.30360908027129
+  },
   "framing": {
     "fullCanvas": true,
     "allCaptureFramesVerified": true,
-    "allEncodedMp4FramesVerified": true,
-    "allEncodedWebpFramesVerified": true,
-    "allEncodedGifFramesVerified": true,
-    "browserDevicePixelRatio": 0.26171875,
-    "calibratedRenderZoom": 4.1875,
-    "captureScale": 0.9552238805970149
+    "allEncodedMp4FramesVerified": true
   },
-  "motion": {
-    "fps": 60,
-    "segments": 11,
-    "continuousBetweenActions": true,
-    "maxStepPixels": 17.6,
-    "distinctMovingCaptures": 484,
-    "movingCaptures": 487
-  },
-  "source": "Fresh full-canvas recapture of fictional X UI mock, using real extension controls. Correct Grok SVG. No personal timeline data.",
   "webp": {
     "width": 1280,
     "height": 800,
-    "frames": 759,
-    "fullCanvasVerified": true,
-    "motionFrameDurationsMs": [
+    "frames": 2028,
+    "durationSeconds": 46.982,
+    "frameDurationsMs": [
       16,
-      17
+      17,
+      33,
+      34,
+      50,
+      66,
+      67,
+      83,
+      100,
+      117,
+      134,
+      150,
+      200,
+      216,
+      217,
+      233,
+      250,
+      267,
+      334,
+      684,
+      999,
+      1484,
+      1966
     ],
-    "durationSeconds": 31.666
+    "fullCanvasVerified": true
   },
   "gifCompatibilityPreview": {
     "width": 960,
     "height": 600,
-    "frames": 1583,
-    "fullCanvasVerified": true,
-    "fps": 50
+    "frames": 2349,
+    "durationSeconds": 46.98,
+    "frameDurationsMs": [
+      20
+    ],
+    "fullCanvasVerified": true
   }
 }

@@ -7,6 +7,7 @@ const posts = [
   { handle: "demo_updates", name: "The Update", avatar: "TU", color: "#765452", time: "41m", text: "This «simple framework» will change how you think about productivity.", replies: "19", likes: "91" },
   { handle: "demo_weekend", name: "Weekend Notes", avatar: "WN", color: "#375d72", time: "48m", text: "Our book swap is back this Sunday!\nBring something you loved, leave with something new.", replies: "3", likes: "29" },
   { handle: "demo_giveaway", name: "Launch Board", avatar: "LB", color: "#69517c", time: "1h", text: "GIVEAWAY: repost for a chance to win a new setup.\nEntries close tonight.", replies: "51", likes: "203" },
+  { handle: "demo_jules", name: "Jules Morgan", avatar: "JM", color: "#466560", time: "5m", text: "Here is the post we were talking about.\nMy comment stays visible while the quote is filtered.", replies: "4", likes: "17", quote: true },
 ];
 const timeline = document.querySelector("#posts");
 function icon(name) { const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");const use=document.createElementNS(svg.namespaceURI,"use");use.setAttribute("href",`#${name}`);svg.append(use);return svg; }
@@ -24,6 +25,7 @@ for (const post of posts) {
   const more=document.createElement("span");more.className="more";more.textContent="···";row.append(user,more);
   const text=document.createElement("div");text.dataset.testid="tweetText";text.textContent=post.text;
   body.append(row,text);
+  if(post.quote){const quoted=document.createElement("div");quoted.className="quoted-post";quoted.setAttribute("role","link");quoted.tabIndex=0;quoted.innerHTML='<div data-testid="UserAvatar-Container-demo_daily"></div><div class="user-row"><div data-testid="User-Name"><b>Daily Ideas</b><span class="handle">@demo_daily</span></div></div><div data-testid="tweetText">The future is already here — and it changes everything.</div>';body.append(quoted);}
   if(post.media){const media=document.createElement("div");media.className="post-image";const line=document.createElement("div");line.textContent="Take the long way.";const small=document.createElement("small");small.textContent="WEEKEND NOTES";line.prepend(small);media.append(line);body.append(media);}
   const actions=document.createElement("div");actions.className="actions";
   for(const [type,count] of [["reply",post.replies],["repost","6"],["heart",post.likes],["views","2.4K"],["bookmark",""],["share",""]]){const action=document.createElement("span");action.append(icon(type),count);actions.append(action);}

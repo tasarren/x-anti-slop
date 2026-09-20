@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing GitHub release tag (must match package.json)
-        required: true
+        description: Existing release tag; leave empty for a configuration check of main
+        required: false
         type: string
+      submit:
+        description: Upload and submit to the selected stores (leave off to check only)
+        type: boolean
+        default: false
       store:
         description: Store to submit for review
         required: true
@@ -32,10 +36,44 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.tag }}
     steps:
+      - name: Require a release for submissions
+        if: inputs.submit && inputs.tag == ''
+        run: |
+          echo '::error::Store submission requires an existing release tag.'
+          exit 1
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: refs/tags/${{ inputs.tag }}
+          ref: ${{ inputs.tag != '' && format('refs/tags/{0}', inputs.tag) || github.sha }}
           persist-credentials: false
+      - name: Check the selected store configuration
+        env:
+          STORE: ${{ matrix.store }}
+          SUBMIT: ${{ inputs.submit }}
+          CHROME_PUBLISHER_ID: ${{ vars.CHROME_PUBLISHER_ID }}
+          CHROME_EXTENSION_ID: ${{ vars.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          required=(AMO_JWT_ISSUER AMO_JWT_SECRET)
+          if [[ "$STORE" == chrome ]]; then
+            required=(CHROME_PUBLISHER_ID CHROME_CLIENT_ID CHROME_CLIENT_SECRET CHROME_REFRESH_TOKEN)
+            if [[ "$SUBMIT" == true ]]; then
+              required+=(CHROME_EXTENSION_ID)
+            elif [[ -z "$CHROME_EXTENSION_ID" ]]; then
+              echo '::warning::CHROME_EXTENSION_ID is not set; create the first store draft before enabling submissions.'
+            fi
+          fi
+          missing=0
+          for name in "${required[@]}"; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing $name in the $STORE-store environment."
+              missing=1
+            fi
+          done
+          exit "$missing"
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
@@ -43,6 +81,7 @@ jobs:
       - run: npm ci
       - run: npm run package
       - name: Verify the rebuild against the published release
+        if: inputs.tag != ''
         run: |
           gh release download "$RELEASE_TAG" --dir .release --pattern '*.zip' --pattern SHA256SUMS.txt
           (cd .release && sha256sum --check SHA256SUMS.txt)
@@ -51,7 +90,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
       - name: Upload and submit to Chrome Web Store
-        if: matrix.store == 'chrome'
+        if: inputs.submit && matrix.store == 'chrome'
         run: node scripts/publish-chrome.ts
         env:
           CHROME_PUBLISHER_ID: ${{ vars.CHROME_PUBLISHER_ID }}
@@ -60,8 +99,11 @@ jobs:
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
       - name: Sign and submit to Firefox Add-ons
-        if: matrix.store == 'firefox'
+        if: inputs.submit && matrix.store == 'firefox'
         run: node scripts/publish-firefox.ts
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+      - name: Report configuration check
+        if: '!inputs.submit'
+        run: echo 'Configuration and package checks passed. No extension was uploaded or submitted.' >> "$GITHUB_STEP_SUMMARY"

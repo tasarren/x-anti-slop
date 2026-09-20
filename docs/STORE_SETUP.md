@@ -10,7 +10,7 @@
 | Checksums | `artifacts/SHA256SUMS.txt` |
 | Extension/store icon | `public/icons/128.png` (also 16, 32 and 48px runtime icons) |
 | Small promotional image | `store-assets/promo-440x280.png` |
-| Five individual store screenshots | `store-assets/screenshots/` (1280×800 RGB PNGs) |
+| Six individual store screenshots | `store-assets/screenshots/` (1280×800 RGB PNGs) |
 | Animated walkthrough (60 fps) | `store-assets/animation/x-anti-slop-demo-60fps.webp` |
 | Promotional video source (60 fps) | `store-assets/animation/x-anti-slop-demo.mp4` |
 | GIF compatibility preview (50 fps) | `store-assets/animation/x-anti-slop-demo.gif` |
@@ -60,6 +60,18 @@ Use [Google's OAuth/API instructions](https://developer.chrome.com/docs/webstore
 | Secret | `CHROME_CLIENT_SECRET` |
 | Secret | `CHROME_REFRESH_TOKEN` |
 
+#### Where to create the OAuth client
+
+OAuth publishing credentials live in **Google Cloud → Google Auth Platform**. The paid Chrome Web Store developer registration does not create this client automatically.
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/), select or create a project such as `X-Anti-Slop`, then use **APIs & Services → Library** to find and enable **Chrome Web Store API**. Keep the same project selected throughout setup.
+2. Open [Google Auth Platform → Branding](https://console.cloud.google.com/auth/branding). If prompted, choose **Get started**. Enter an app name such as `X-Anti-Slop publishing`, your support/contact email, and **External** as the audience. Review the presented terms yourself. While the app is in Testing, add the publisher's Google account under **Audience → Test users**.
+3. Open [Google Auth Platform → Clients](https://console.cloud.google.com/auth/clients), choose **Create client**, and select **Web application**. Name it `GitHub publishing`. Add `https://developers.google.com/oauthplayground` under **Authorized redirect URIs**, then create the client. This is an OAuth client for publishing automation; choose Web application even though the published product is an extension.
+4. Save the displayed **Client ID** as `CHROME_CLIENT_ID` and **Client secret** as `CHROME_CLIENT_SECRET`. Google shows the secret at creation; keep it in your password manager or ignored local `.env`, not a tracked JSON download.
+5. Open [OAuth Playground](https://developers.google.com/oauthplayground), open the gear/settings panel, select **Use your own OAuth credentials**, and enter those two values. Enter `https://www.googleapis.com/auth/chromewebstore` as the scope, select **Authorize APIs**, and sign in as the store item's owner. Choose **Exchange authorization code for tokens** and save the **refresh token** as `CHROME_REFRESH_TOKEN`.
+
+Google's [current client-creation instructions](https://developers.google.com/identity/protocols/oauth2/web-server#creatingcred) use the **Clients → Create Client** labels. Older guides may call these **APIs & Services → Credentials → Create credentials → OAuth client ID**.
+
 Use your own OAuth client in the OAuth Playground and authorize the Google account that owns the store item. Request `https://www.googleapis.com/auth/chromewebstore`. For ongoing releases, move the OAuth app out of **Testing** before generating the production refresh token: external apps left in Testing receive refresh tokens that expire after seven days for this scope. This OAuth app setting is separate from publishing the extension. See [Google's token expiration rules](https://developers.google.com/identity/protocols/oauth2#expiration).
 
 The first Chrome upload normally happens when creating the store item. Submit that already uploaded first version from the dashboard after approval; do not re-upload `0.1.0` through the update workflow. Use automated upload-and-submit for later, explicitly approved higher extension versions.
@@ -101,6 +113,15 @@ gh variable list --env chrome-store
 
 Setting credentials does not start a submission. The GitHub token supplied to Actions handles release downloads; it cannot authenticate to Google or Mozilla, and no additional GitHub personal access token is needed for this workflow.
 
+After the updated workflow is available on `main`, run a configuration and build check without uploading an extension:
+
+```sh
+gh workflow run publish-stores.yml --ref main \
+  -f store=both -f submit=false
+```
+
+Review the environment approval for this run. Check-only mode verifies that required credentials are present; it does not test their authentication against the stores. Chrome's missing extension ID remains a warning until the first draft exists. Submission remains an explicit separate action.
+
 ## 4. Approve a specific source snapshot and submit
 
 For an approved release, merge the reviewed source into `main` and choose an unused version tag. A candidate such as `v0.1.0-rc.1` preserves manifest version `0.1.0` and creates a GitHub prerelease. Never replace published tags or assets.
@@ -111,7 +132,7 @@ Equivalent CLI dispatch, **only after the owner authorizes submission and that c
 
 ```sh
 gh workflow run publish-stores.yml --ref main \
-  -f tag=v0.1.0-rc.1 -f store=firefox
+  -f tag=v0.1.0-rc.1 -f store=firefox -f submit=true
 ```
 
 For later approved releases, use their actual tag and choose `chrome`, `firefox`, or `both`. The run waits for the corresponding GitHub environment approval before executing. Registration, store agreements, fees where applicable, account verification, and store review remain outside Actions.

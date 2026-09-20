@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
+import type { SpawnSyncReturns } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -103,4 +104,23 @@ test("Chrome HTTP errors fail without disclosing credential-bearing response bod
     assert.equal(error.message.includes("sensitive-server-body"), false);
     return true;
   });
+});
+
+test("store checks never submit by default and require the item ID only for a Chrome submission", async () => {
+  const workflow = await readFile('.github/workflows/publish-stores.yml', 'utf8');
+  assert.match(workflow, /submit:\n(?:[^\n]*\n)*?        default: false/);
+  assert.match(workflow, /if: inputs\.submit && inputs\.tag == ''/);
+  for (const store of ['chrome', 'firefox']) assert.ok(workflow.includes(`if: inputs.submit && matrix.store == '${store}'`));
+  const script = workflow.match(/- name: Check the selected store configuration[\s\S]*?        run: \|\n([\s\S]*?)(?=\n      -)/)?.[1]?.replace(/^          /gm, '');
+  assert.ok(script);
+  const base = Object.fromEntries(['CHROME_PUBLISHER_ID', 'CHROME_CLIENT_ID', 'CHROME_CLIENT_SECRET', 'CHROME_REFRESH_TOKEN', 'AMO_JWT_ISSUER', 'AMO_JWT_SECRET'].map(name => [name, 'synthetic-private-value']));
+  for (const [store, submit, extensionId, issuer, expected] of [
+    ['chrome', 'false', '', 'set', 0], ['chrome', 'true', '', 'set', 1],
+    ['chrome', 'true', 'item', 'set', 0], ['firefox', 'false', '', 'set', 0],
+    ['firefox', 'false', '', '', 1],
+  ] as const) {
+    const result: SpawnSyncReturns<string> = spawnSync('bash', ['-e', '-u', '-o', 'pipefail', '-c', script], { encoding:'utf8', env:{ PATH:process.env['PATH'], ...base, STORE:store, SUBMIT:submit, CHROME_EXTENSION_ID:extensionId, AMO_JWT_ISSUER:issuer } });
+    assert.equal(result.status, expected, result.stdout + result.stderr);
+    assert.equal((result.stdout + result.stderr).includes('synthetic-private-value'), false);
+  }
 });

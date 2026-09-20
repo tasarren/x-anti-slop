@@ -37,6 +37,20 @@ jobs:
           path: artifacts/*
           if-no-files-found: error
           retention-days: 30
+      - name: Upload store screenshots and walkthroughs
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: x-anti-slop-store-media-${{ github.sha }}
+          path: |
+            store-assets/screenshots/*.png
+            store-assets/animation/*.mp4
+            store-assets/animation/*.webp
+            store-assets/animation/*.gif
+            store-assets/animation/recording.json
+            store-assets/promo-440x280.png
+            store-assets/README.md
+          if-no-files-found: error
+          retention-days: 30
 
   release:
     if: github.event_name == 'push' && github.ref_type == 'tag'

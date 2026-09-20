@@ -30,7 +30,11 @@ Run this only once for a version. A failed release job can be rerun if no GitHub
 
 ## Optional store automation
 
-**Submit to extension stores** is manually triggered with an existing release tag and a choice of `chrome`, `firefox`, or `both`. It checks out the exact tag, rebuilds and validates it, downloads that GitHub release, verifies its checksums, and requires the rebuild to match the released bytes before submitting. The two stores run independently; a failure in one does not cancel the other. Submissions to the same store are serialized.
+**Submit to extension stores** is manually triggered with a choice of `chrome`, `firefox`, or `both`. It defaults to **check only**: `submit` is false. With no tag, it checks the selected main-branch snapshot, required environment configuration, builds, tests, and Firefox validation without uploading to a store. A missing Chrome extension ID is reported as a warning in this mode because the first draft creates it.
+
+Actual submission requires explicitly setting `submit=true` and supplying an existing release tag. The workflow then requires all store identifiers, checks out the exact tag, rebuilds and validates it, downloads that GitHub release, verifies its checksums, and requires the rebuild to match the released bytes before submitting. The two stores run independently; a failure in one does not cancel the other. Submissions to the same store are serialized. Both modes retain the environment approval requirement.
+
+The build workflow also uploads the individual screenshots and animated walkthroughs as a separate `x-anti-slop-store-media-<commit>` artifact. These are downloadable CI artifacts, not store submissions or new GitHub releases.
 
 The following GitHub environments are configured under **Settings → Environments**. Both require owner review, disallow admin bypass, and permit workflows launched from `main` only. Put secrets in the environment secret fields, never in files or workflow inputs. Store credentials are available only to the protected configuration-check and submission steps, never to the pull-request build.
 
