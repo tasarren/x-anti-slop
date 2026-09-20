@@ -1,25 +1,51 @@
-# X-Anti-Slop
+<p align="center">
+  <img src="public/icons/128.png" alt="X-Anti-Slop logo" width="96" height="96">
+</p>
 
-A small TypeScript browser extension that hides posts on X when their text matches one of your regular expressions. Built for current Chromium browsers (Chrome, Edge, Brave, Vivaldi, Opera, etc.) and Firefox browsers with Manifest V3 support.
+<h1 align="center">X-Anti-Slop</h1>
 
-Get builds from this repository's **Actions** or **Releases** pages. Report bugs under **Issues**.
+<p align="center"><strong>Your timeline. Your rules.</strong></p>
 
-[Contribute](CONTRIBUTING.md) · [Development](docs/DEVELOPMENT.md) · [Store setup](docs/STORE_SETUP.md) · [Privacy](docs/PRIVACY.md)
+<p align="center">Hide posts on X with your own regular expressions.<br>Keep the accounts you trust and reveal a hidden post whenever you want.</p>
 
-Version: **0.1.0** · License: **[MIT](LICENSE)**. Official store listings are not live yet. GitHub ZIPs use the developer installation steps below.
+<p align="center"><strong>Firefox · Chrome · Chromium browsers</strong><br>Version 0.1.0 · MIT licensed · Everything runs on your device</p>
 
-- Editable filter list with per-filter enable switches, flags, and syntax validation.
-- Whitelist accounts with the small star beside their name or on a hidden-post notice; manage the list in settings.
-- Default: a 50px row saying **“This post is hidden by X-Anti-Slop”**, with a **Show** button.
-- Optional complete row collapse with no message or reserved gap.
-- Settings apply immediately to open X tabs after saving.
-- A settings card between **More** and **Post** opens the real editor over X; it becomes an icon in the narrow navigation rail.
-- Filters posts and quoted posts independently, including newly loaded text, line breaks, and emoji text.
-- All settings and matching stay on your device. No runtime dependencies, server, analytics, or API keys.
+![X-Anti-Slop in action: open the left-side settings card, filter posts, whitelist an account, and add a custom pattern](store-assets/animation/x-anti-slop-demo.gif)
 
-## Install the prepared build
+<p align="center">A demonstration with fictional posts in an X UI mock.<br><a href="store-assets/animation/x-anti-slop-demo.mp4">Watch the full-quality 60 fps video</a> · <a href="store-assets/screenshots/01-compact-filtering.png">View a screenshot</a></p>
 
-### Chrome, Edge, Brave, Vivaldi, and other Chromium browsers
+- **Your patterns:** add regex filters with an instant preview and clear validation.
+- **Your choice:** replace matching posts with a small notice, or remove the rows entirely.
+- **Your accounts:** whitelist someone with the tiny star beside their name.
+- **Keep the conversation:** filter a matching quote without hiding the author's own comment.
+- **Within reach:** open settings between **More** and **Post**; a compact icon fits the narrow navigation rail.
+- **Private by design:** no accounts, tracking, server, or data sent anywhere.
+
+## Easy install
+
+| Firefox and compatible browsers | Chrome and compatible Chromium browsers |
+| :---: | :---: |
+| **Firefox Add-ons — coming soon** | **Chrome Web Store — coming soon** |
+| Official install link will appear after approval. | Official install link will appear after approval. |
+
+The extension has not been published to either store yet. These entries will link directly to the approved listings when they are available. For local testing before publication, follow the development instructions below.
+
+[Contributing](CONTRIBUTING.md) · [Privacy](docs/PRIVACY.md) · [Security](SECURITY.md)
+
+## Development guide
+
+Use Git, Node **24**, and npm. Clone the repository, then build both browser packages:
+
+```sh
+npm ci
+npm run package
+```
+
+The build produces `dist/firefox` and `dist/chromium`. CI also provides test packages under this repository's **Actions** tab; those packages use the developer installation steps below. See the [full development guide](docs/DEVELOPMENT.md) for the code map and workflow, or [store setup](docs/STORE_SETUP.md) for maintainer publishing instructions.
+
+### Load a development build
+
+#### Chrome, Edge, Brave, Vivaldi, and other Chromium browsers
 
 1. Open your browser's extensions page (`chrome://extensions`, `edge://extensions`, or its equivalent).
 2. Turn on **Developer mode** and select **Load unpacked**.
@@ -28,7 +54,7 @@ Version: **0.1.0** · License: **[MIT](LICENSE)**. Official store listings are n
 
 See the [official Chrome instructions](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
 
-### Firefox and Firefox-based browsers
+#### Firefox and Firefox-based browsers
 
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Select **Load Temporary Add-on**.
@@ -41,7 +67,7 @@ Temporary Firefox installations last until the browser restarts. Permanent insta
 
 The Firefox manifest targets desktop Firefox 140+ and Android Firefox 142+; Chromium output targets 109+. Browser forks must support the corresponding WebExtension APIs. Mobile Chromium browsers without extension support cannot load it. [Mozilla documents the browser-specific manifest fields here](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/browser_specific_settings).
 
-## Filters
+### Filters
 
 Click the on-page card to open a floating settings panel without leaving X. In the narrow left navigation, click its icon; if the navigation disappears entirely, a small floating icon remains near the bottom-right corner. **Save changes** updates the timeline immediately. Close with **×** or **Escape**, or choose **Open in tab**. Reopening the panel preserves an unsaved draft until the page is reloaded.
 
@@ -65,7 +91,7 @@ Enter patterns **without surrounding slashes**, and enter flags separately. A po
 
 These are personal text filters. Punctuation does not reliably identify AI authorship, and these filters can also hide human writing.
 
-## Account whitelist
+### Account whitelist
 
 Click the **small star** next to a post's author, or **Whitelist** on its hidden-post notice, to always show posts by that account. The star fills green when whitelisted; click it again to resume filtering. Hover for the account/action tooltip. In complete-removal mode, add the handle under **Account whitelist** in settings, or temporarily switch to notices to access the post.
 
@@ -73,7 +99,7 @@ Account changes save immediately and update open X tabs. You can add a handle wi
 
 Posts and their quotes have separate authors and separate filtering. Whitelisting the citing author keeps their own text visible; matching quotes by other authors can still be hidden. Whitelisting a quoted author exempts that quote, without exempting the citing author's own text. **Reset defaults** resets filter/display preferences and preserves the whitelist.
 
-## Contribute and develop
+### Build and contribute
 
 Use Git, Node 24 (CI's version), and npm. Node 22.18+ is supported.
 
@@ -97,7 +123,7 @@ npm run validate:firefox
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for issues and PRs, [DEVELOPMENT.md](docs/DEVELOPMENT.md) for the workflow and ignore rules, and [SECURITY.md](SECURITY.md) for private vulnerability reports. Store registration, listing text and assets are in [STORE_SETUP.md](docs/STORE_SETUP.md).
 
-## How it works
+### How it works
 
 The content script finds `article[data-testid="tweet"]` and reads `[data-testid="tweetText"]` nodes owned by each post. Quote cards are separate filtering boundaries: a quote-only match hides the quote while preserving the citing author's comment and actions. A match in the author's own text still hides their whole post. It does not match display names, handles, timestamps, or action labels. Emoji image alt text and `<br>` line breaks are included.
 
@@ -120,7 +146,7 @@ For a normal timeline row, it changes the size of the containing `[data-testid="
 
 GitHub Actions creates downloadable builds for pull requests and `main`. Pushing a matching version tag such as `v0.1.0` creates a GitHub Release. The version stays **0.1.0** until the owner requests a bump; further work gets CI artifacts without replacing the release. Store submissions are a separate manual workflow. See [the release guide](docs/RELEASING.md) for credentials, first-publication steps, and version rules.
 
-## Limits and verification
+### Limits and verification
 
 - Matches text currently rendered by X, including text loaded by **Show more** when expanded. It does not fetch full truncated posts, perform image OCR, or transcribe video/audio.
 - X can change its markup. The selectors above were verified against a signed-in timeline on 2026-09-19.
