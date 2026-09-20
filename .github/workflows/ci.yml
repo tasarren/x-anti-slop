@@ -80,7 +80,7 @@ jobs:
           Chromium and Firefox packages, plus reproducible source and SHA-256 checksums.
 
           Chromium users can extract the Chromium ZIP and use **Load unpacked**.
-          The Firefox ZIP is unsigned and can be loaded as a temporary add-on. Permanent installation requires Mozilla signing or the Firefox store listing.
+          The Firefox ZIP is unsigned and can be loaded as a temporary add-on. After Mozilla approval, a separate workflow adds the signed Firefox XPI here for permanent installation through **Install Add-on From File…** in about:addons.
 
           See the repository README for installation instructions. Store submission is a separate manual workflow.
           NOTES

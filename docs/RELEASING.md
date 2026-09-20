@@ -4,7 +4,7 @@
 
 The version stays **0.1.0** until the owner explicitly requests a bump. There are no automatic version increments, release bots, or date-based versions. `package.json` is the version source; the build writes it into both browser manifests, the settings badge, and package names. Keep `package-lock.json` in sync using npm.
 
-Release tags are annotated tags named `vMAJOR.MINOR.PATCH`, starting with `v0.1.0`. A candidate may add `-rc.N`, for example `v0.1.0-rc.1`, without changing the extension's manifest version. Any other tag/version mismatch fails. Candidate tags create GitHub prereleases and do not replace the latest stable release. Once published, keep each tag and its assets unchanged.
+Release tags are annotated tags named `vMAJOR.MINOR.PATCH`, starting with `v0.1.0`. A candidate may add `-rc.N`, for example `v0.1.0-rc.1`, without changing the extension's manifest version. Any other tag/version mismatch fails. Candidate tags create GitHub prereleases and do not replace the latest stable release. Once published, keep each tag and its existing assets unchanged. A signed Firefox download can be added after approval.
 
 ## GitHub Actions
 
@@ -17,7 +17,7 @@ Only a successful **tag push** creates a public GitHub Release with:
 - `x-anti-slop-0.1.0-source.zip` (TypeScript, lockfile, build instructions, and tests)
 - `SHA256SUMS.txt`
 
-The Chromium package serves Chrome, Edge, Brave, Vivaldi, and other compatible Chromium browsers. Firefox has its own manifest. GitHub ZIP downloads are developer packages; publishing to the stores enables normal store installation and updates.
+The Chromium package serves Chrome, Edge, Brave, Vivaldi, and other compatible Chromium browsers. Firefox has its own manifest. GitHub ZIP downloads are developer packages. The signed Firefox XPI described below supports permanent installation.
 
 For an authorized new release, merge a reviewed PR into `main`, verify `npm run package`, then create and push the explicitly approved tag. Use an unused tag name. Example of a candidate, only after authorization:
 
@@ -33,6 +33,37 @@ Run this only once for a version. A failed release job can be rerun if no GitHub
 **Submit to extension stores** is manually triggered with a choice of `chrome`, `firefox`, or `both`. It defaults to **check only**: `submit` is false. With no tag, it checks the selected main-branch snapshot, required environment configuration, builds, tests, and Firefox validation without uploading to a store. A missing Chrome extension ID is reported as a warning in this mode because the first draft creates it.
 
 Actual submission requires explicitly setting `submit=true` and supplying an existing release tag. The workflow then requires all store identifiers, checks out the exact tag, rebuilds and validates it, downloads that GitHub release, verifies its checksums, and requires the rebuild to match the released bytes before submitting. The two stores run independently; a failure in one does not cancel the other. Submissions to the same store are serialized. Both modes retain the environment approval requirement.
+
+You can run this from the terminal with `gh`. Run these commands from the repository checkout:
+
+```sh
+# Check configuration without submitting anything.
+gh workflow run publish-stores.yml --ref main -f store=both -F submit=false
+gh run list --workflow publish-stores.yml --limit 5
+```
+
+For an approved new version, supply its existing release tag and `-F submit=true`. Do not resubmit `v0.1.0`: both stores already have it in review.
+
+```sh
+gh workflow run publish-stores.yml --ref main -f tag="$RELEASE_TAG" -f store=both -F submit=true
+```
+
+Store jobs wait for the owner's environment approval. That can also happen through `gh`, without opening the dashboard. Replace `RUN_ID` with the run you checked above:
+
+```sh
+gh api repos/{owner}/{repo}/actions/runs/RUN_ID/pending_deployments \
+  --jq '.[] | {id: .environment.id, name: .environment.name, can_approve: .current_user_can_approve}'
+```
+
+Check the run's tag and store choice before approving. For each intended environment, replace `ENVIRONMENT_ID` below with its returned ID:
+
+```sh
+gh api --method POST repos/{owner}/{repo}/actions/runs/RUN_ID/pending_deployments \
+  -F 'environment_ids[]=ENVIRONMENT_ID' -f state=approved -f comment='Approve the selected release submission'
+gh run watch RUN_ID --exit-status
+```
+
+These commands use the existing environment secrets. No credentials belong in command arguments, and no new secrets are needed for signed downloads. Store review still happens after submission. Account verification and store requests may need a manual response.
 
 The build workflow also uploads the individual screenshots and animated walkthroughs as a separate `x-anti-slop-store-media-<commit>` artifact. These are downloadable CI artifacts, not store submissions or new GitHub releases.
 
@@ -71,7 +102,33 @@ The workflow uses Mozilla's pinned `web-ext` tool with `--channel listed`, sends
 
 The permanent add-on ID is `browser_specific_settings.gecko.id` from the generated Firefox manifest. Do not change it after the first submission. It replaces the early local prototype ID; anyone who installed that prototype should remove it before installing this build.
 
-The unsigned Firefox GitHub ZIP does not become installable permanently merely because CI passed. Once AMO approves/signs the extension, users should install from its AMO listing. This workflow does not claim store approval or attach an unsigned ZIP disguised as an XPI.
+### Signed Firefox downloads on GitHub
+
+**Collect signed Firefox download** checks the latest stable GitHub release each hour. After AMO approves that exact version, it downloads Mozilla's signed XPI. The job checks Mozilla's SHA-256 checksum and compares every extension file with the released Firefox ZIP. Only Mozilla's signing metadata may differ.
+
+It then adds these files to the same release:
+
+- `x-anti-slop-0.1.0-firefox.xpi`
+- `x-anti-slop-0.1.0-firefox.xpi.sha256`
+
+Existing assets, their checksums, and the release tag stay unchanged. Repeated runs skip completed releases and can finish a partial upload. A pending review leaves no XPI asset. Network errors or mismatched files fail the job.
+
+The job reads AMO's public API and uses GitHub's built-in token to attach files. It has no store secrets and cannot submit an extension. Scheduled runs use the latest stable release. To check a specific release or candidate:
+
+```sh
+gh workflow run signed-firefox.yml --ref main -f tag=v0.1.0
+gh run list --workflow signed-firefox.yml --limit 5
+```
+
+GitHub can delay scheduled runs and disables schedules in inactive public repositories after 60 days. Re-enable the workflow if that happens. A manual run can collect an older version if a newer GitHub release appeared before its AMO review finished.
+
+Users can download the XPI and select it from Firefox's **Install Add-on From File…** menu in `about:addons`. The manifest has no custom update URL, so Firefox checks AMO for later listed versions. See [Mozilla's self-distribution guide](https://extensionworkshop.com/documentation/publish/self-distribution/).
+
+### Why there is no Chrome CRX download
+
+A CRX on GitHub does not provide a general install path for Chrome users. Windows and macOS restrict self-hosted installations to managed environments. Linux has additional options, but they would not give everyone the same installation flow. See [Chrome's distribution rules](https://developer.chrome.com/docs/extensions/how-to/distribute).
+
+Use the Chrome Web Store for regular installation and updates. Keep the Chromium ZIP for **Load unpacked** during development. The existing API workflow handles future store updates without a dashboard upload.
 
 ## Store assets and privacy
 
