@@ -4,156 +4,102 @@
 
 <h1 align="center">X-Anti-Slop</h1>
 
-<p align="center"><strong>Your timeline. Your rules.</strong></p>
+I made this because X/Twitter's muted words don't support regular expressions. I wanted to filter out some of the repetitive stuff in my feed.
 
-<p align="center">Hide posts on X with your own regular expressions.<br>Keep the accounts you trust and reveal a hidden post whenever you want.</p>
+It's a browser extension for Firefox and Chrome-based browsers. You add patterns, and it hides posts that match them. Filters and settings stay in your browser.
 
-<p align="center"><strong>Firefox · Chrome · Chromium browsers</strong><br>Version 0.1.0 · MIT licensed · Everything runs on your device</p>
+![Filtering posts and whitelisting an account with X-Anti-Slop](store-assets/animation/x-anti-slop-demo.gif)
 
-![X-Anti-Slop in action: open the left-side settings card, filter posts, whitelist an account, and add a custom pattern](store-assets/animation/x-anti-slop-demo.gif)
+The demo uses a mock feed with fictional posts.
 
-<p align="center">A demonstration with fictional posts in an X UI mock.<br><a href="store-assets/animation/x-anti-slop-demo.mp4">Watch the full-quality 60 fps video</a> · <a href="store-assets/screenshots/01-compact-filtering.png">View a screenshot</a></p>
+## Install
 
-- **Your patterns:** add regex filters with an instant preview and clear validation.
-- **Your choice:** replace matching posts with a small notice, or remove the rows entirely.
-- **Your accounts:** whitelist someone with the tiny star beside their name.
-- **Keep the conversation:** filter a matching quote without hiding the author's own comment.
-- **Within reach:** open settings between **More** and **Post**; a compact icon fits the narrow navigation rail.
-- **Private by design:** no accounts, tracking, server, or data sent anywhere.
+- Firefox Add-ons: not published yet.
+- Chrome Web Store: not published yet.
 
-## Easy install
-
-| Firefox and compatible browsers | Chrome and compatible Chromium browsers |
-| :---: | :---: |
-| **Firefox Add-ons — coming soon** | **Chrome Web Store — coming soon** |
-| Official install link will appear after approval. | Official install link will appear after approval. |
-
-The extension has not been published to either store yet. These entries will link directly to the approved listings when they are available. For local testing before publication, follow the development instructions below.
-
-[Contributing](CONTRIBUTING.md) · [Privacy](docs/PRIVACY.md) · [Security](SECURITY.md)
+I'll add the official store links once they're approved. For now, you can build and load the extension locally.
 
 ## Development guide
 
-Use Git, Node **24**, and npm. Clone the repository, then build both browser packages:
+Use Git, Node 24, and npm. From the project directory, run:
 
 ```sh
 npm ci
 npm run package
 ```
 
-The build produces `dist/firefox` and `dist/chromium`. CI also provides test packages under this repository's **Actions** tab; those packages use the developer installation steps below. See the [full development guide](docs/DEVELOPMENT.md) for the code map and workflow, or [store setup](docs/STORE_SETUP.md) for maintainer publishing instructions.
+This creates the Firefox build in `dist/firefox` and the Chromium build in `dist/chromium`. ZIP packages are in `artifacts`.
 
-### Load a development build
+CI builds are also available from the repository's **Actions** tab. Extract the browser ZIP before following the steps below.
 
-#### Chrome, Edge, Brave, Vivaldi, and other Chromium browsers
-
-1. Open your browser's extensions page (`chrome://extensions`, `edge://extensions`, or its equivalent).
-2. Turn on **Developer mode** and select **Load unpacked**.
-3. Choose the **`dist/chromium`** directory in this project. If using the ZIP, extract it first and choose the extracted directory containing `manifest.json`.
-4. Reload any already-open X tabs once, then pin/open X-Anti-Slop to edit filters.
-
-See the [official Chrome instructions](https://developer.chrome.com/docs/extensions/get-started/tutorial/hello-world#load-unpacked).
-
-#### Firefox and Firefox-based browsers
+### Firefox
 
 1. Open `about:debugging#/runtime/this-firefox`.
-2. Select **Load Temporary Add-on**.
-3. Choose **`dist/firefox/manifest.json`**.
-4. Allow access to X if prompted and reload already-open X tabs. Use **X-Anti-Slop** between **More** and **Post**, or open it from Firefox's puzzle-piece menu.
+2. Click **Load Temporary Add-on**.
+3. Select `dist/firefox/manifest.json`, or the manifest from an extracted Firefox ZIP.
+4. Allow access to X if Firefox asks, then reload your X tabs.
 
-For a permanent toolbar shortcut, open Firefox's extensions menu, find X-Anti-Slop and select **Pin to Toolbar**. New installs request toolbar placement; Firefox preserves an existing installation's placement choice. See [Mozilla's toolbar guide](https://support.mozilla.org/en-US/kb/extensions-button).
+Firefox removes temporary add-ons when it restarts. The store version will need Mozilla's signing before it can stay installed.
 
-Temporary Firefox installations last until the browser restarts. Permanent installation on standard Firefox requires Mozilla signing. The provided ZIP is an unsigned distribution archive, not a signed installable XPI. If using the ZIP, extract it and choose the extracted `manifest.json`. See [Mozilla's temporary installation guide](https://extensionworkshop.com/documentation/develop/temporary-installation-in-firefox/).
+You can pin the extension from Firefox's puzzle-piece menu. There's also a settings card on X, between **More** and **Post**.
 
-The Firefox manifest targets desktop Firefox 140+ and Android Firefox 142+; Chromium output targets 109+. Browser forks must support the corresponding WebExtension APIs. Mobile Chromium browsers without extension support cannot load it. [Mozilla documents the browser-specific manifest fields here](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/browser_specific_settings).
+### Chrome, Edge, Brave, and other Chromium browsers
+
+1. Open `chrome://extensions`, `edge://extensions`, or your browser's extensions page.
+2. Enable **Developer mode**.
+3. Click **Load unpacked** and select `dist/chromium`, or the folder from an extracted Chromium ZIP.
+4. Reload your X tabs.
+
+The current builds target Firefox 140+, Firefox for Android 142+, and Chromium 109+. Your browser must support extensions.
 
 ### Filters
 
-Click the on-page card to open a floating settings panel without leaving X. In the narrow left navigation, click its icon; if the navigation disappears entirely, a small floating icon remains near the bottom-right corner. **Save changes** updates the timeline immediately. Close with **×** or **Escape**, or choose **Open in tab**. Reopening the panel preserves an unsaved draft until the page is reloaded.
+Open the settings card on X, add a pattern, and click **Save changes**. On narrow screens, the card becomes an icon.
 
-The default matches only an em dash or either guillemet. Invisible direction and spacing marks are not included:
+By default, matching posts leave a small notice. Click **Show** to read one, or choose **Hide it completely** in settings to remove the row.
+
+The default pattern looks for an em dash or either guillemet:
 
 ```regex
 .?[—«»].?
 ```
 
-The default uses the `u` flag. `[—«»]` is equivalent for deciding whether a post matches. If you saved the earlier prototype default, use **Reset defaults → Save changes** to replace it; custom filters are not silently rewritten.
+It uses the `u` flag. You can change it, remove it, or add more filters. These are text matches, so they'll also catch people who use the same punctuation.
 
-Enter patterns **without surrounding slashes**, and enter flags separately. A post is hidden if **any enabled filter** matches. An empty filter list hides nothing.
+Enter the pattern without surrounding `/` characters. Put flags in the separate field. A post is hidden when any enabled filter matches.
 
-| Pattern | Flags | Matches |
+| Pattern | Flags | What it matches |
 | --- | --- | --- |
 | `[—«»]` | `u` | An em dash or either guillemet |
 | `\b(giveaway\|airdrop)\b` | `i` | Either word, ignoring case |
-| `^sponsored` | `im` | A line beginning with “sponsored” |
+| `^sponsored` | `im` | A line starting with “sponsored” |
 
-**Save changes** applies the list and display mode. **Reset defaults** only edits the form; save to apply the reset. **Show** reveals a post until it is recycled, its text/identity changes, or settings are saved again. Pause filtering to restore all mounted posts.
+Use **Try your filters** to check some text before saving. **Reset defaults** edits the form, so you still need to save afterward. It keeps your whitelist.
 
-These are personal text filters. Punctuation does not reliably identify AI authorship, and these filters can also hide human writing.
+### Accounts and quoted posts
 
-### Account whitelist
+Click the star beside an account's name to whitelist it. The star turns green. Click it again to apply filters to that account.
 
-Click the **small star** next to a post's author, or **Whitelist** on its hidden-post notice, to always show posts by that account. The star fills green when whitelisted; click it again to resume filtering. Hover for the account/action tooltip. In complete-removal mode, add the handle under **Account whitelist** in settings, or temporarily switch to notices to access the post.
+You can also use **Whitelist** on a hidden-post notice or add a handle in settings. Whitelist changes save immediately.
 
-Account changes save immediately and update open X tabs. You can add a handle with or without `@` and remove entries in settings. Handles are case-insensitive and stored locally; this does not follow, mute, or block anyone on X. The whitelist follows the current handle, not an account's permanent identity, so update it if the account renames itself.
+The extension checks quoted posts separately. Each post uses its own author's whitelist status. If only a quote matches, the extension hides it and leaves the author's comment visible.
 
-Posts and their quotes have separate authors and separate filtering. Whitelisting the citing author keeps their own text visible; matching quotes by other authors can still be hidden. Whitelisting a quoted author exempts that quote, without exempting the citing author's own text. **Reset defaults** resets filter/display preferences and preserves the whitelist.
+### Working on the code
 
-### Build and contribute
-
-Use Git, Node 24 (CI's version), and npm. Node 22.18+ is supported.
-
-```sh
-npm ci
-npm run package
-```
-
-- `npm run typecheck`: strict TypeScript checks.
-- `npm run build`: produces `dist/chromium` and `dist/firefox`.
-- `npm test`: builds/packages and runs extension, release, and publishing regression checks.
-- `npm run package`: checks, builds, validates Firefox, and creates versioned browser/source ZIPs and checksums in `artifacts`.
-- `npm run validate:firefox`: validates the Firefox build using the pinned Mozilla tool.
-- `npm run preview`: opens a local settings UI preview at `http://127.0.0.1:4173` after a build. Its storage is simulated; it does not save preferences or affect X.
-
-After rebuilding, reload the unpacked/temporary extension and then reload X. To validate the Firefox manifest separately:
-
-```sh
-npm run validate:firefox
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for issues and PRs, [DEVELOPMENT.md](docs/DEVELOPMENT.md) for the workflow and ignore rules, and [SECURITY.md](SECURITY.md) for private vulnerability reports. Store registration, listing text and assets are in [STORE_SETUP.md](docs/STORE_SETUP.md).
-
-### How it works
-
-The content script finds `article[data-testid="tweet"]` and reads `[data-testid="tweetText"]` nodes owned by each post. Quote cards are separate filtering boundaries: a quote-only match hides the quote while preserving the citing author's comment and actions. A match in the author's own text still hides their whole post. It does not match display names, handles, timestamps, or action labels. Emoji image alt text and `<br>` line breaks are included.
-
-In notice mode, a matching quote gets its own **Quoted post hidden by X-Anti-Slop** row with Show and, when its author is identifiable, Whitelist. In complete-removal mode, only the quote card disappears. These controls do not navigate to the quote or change who you follow on X.
-
-For a normal timeline row, it changes the size of the containing `[data-testid="cellInnerDiv"]`. The original post stays in the DOM so X keeps ownership of its nodes and can reuse them safely. When a row contains multiple posts, the script handles individual articles. A batched MutationObserver handles scrolling, edits, client-side navigation, and recycled content. The observer is disconnected during extension DOM writes to avoid feedback loops.
-
-`storage.local` persists settings; storage change events update each open X tab. Only the `storage` permission and content-script access to X/Twitter are used. All scripts are bundled locally.
-
-| File | Responsibility |
+| Command | What it does |
 | --- | --- |
-| `src/settings.ts` | Validated preferences, default filter, regex matching |
-| `src/content.ts` | Post discovery, row hiding, reveal, restoration, observation |
-| `src/launcher.ts` | Responsive navigation launcher and floating settings editor |
-| `src/options.ts` | Settings form, validation, tester, persistence |
-| `src/extension.ts` | Select Firefox's `browser` or Chromium's `chrome` API |
-| `public/` | Manifest, settings HTML/CSS, injected row styles |
-| `scripts/` | TypeScript build, ZIP packaging, local UI preview |
-| `tests/check.ts` | Regression checks for filtering, storage, UI, and packages |
+| `npm run build` | Build both browser versions |
+| `npm run typecheck` | Check TypeScript types |
+| `npm test` | Build, package, and run the tests |
+| `npm run package` | Run the tests and Firefox validation, then leave the ZIPs in `artifacts` |
+| `npm run preview` | Start the local settings and mock-feed preview |
 
-GitHub Actions creates downloadable builds for pull requests and `main`. Pushing a matching version tag such as `v0.1.0` creates a GitHub Release. The version stays **0.1.0** until the owner requests a bump; further work gets CI artifacts without replacing the release. Store submissions are a separate manual workflow. See [the release guide](docs/RELEASING.md) for credentials, first-publication steps, and version rules.
+After a rebuild, reload the extension and your X tabs. The preview uses separate settings and doesn't touch your X account.
 
-### Limits and verification
+The [development guide](docs/DEVELOPMENT.md) covers the source files and browser checks. See [CONTRIBUTING.md](CONTRIBUTING.md) for changes and bug reports.
 
-- Matches text currently rendered by X, including text loaded by **Show more** when expanded. It does not fetch full truncated posts, perform image OCR, or transcribe video/audio.
-- X can change its markup. The selectors above were verified against a signed-in timeline on 2026-09-19.
-- Uses native JavaScript regex semantics. Global/sticky cursors reset for every post. Invalid enabled filters block saving; corrupt stored settings pause filtering rather than hide arbitrary posts.
-- Regexes execute synchronously. Very expensive backtracking patterns can stall a tab; this version is intended for personally authored filters, with no remote filter subscriptions or imported lists.
-- Live Chromium timeline checks verified a 50px notice, 0px complete removal with no following gap, and restoration through **Show**. Temporary test modifications were removed afterward.
-- Automated checks cover dynamic and edited posts, quote text, recycled identities, orphan cleanup, pause/removal, emoji/newlines, both API namespaces, invalid patterns, storage failures, empty lists, and the initial-storage race.
-- Firefox receives a separate manifest and static validation. A full extension installation and Firefox runtime test remain manual release checks.
+The extension only checks text that X has loaded. It doesn't scan images or videos. Very expensive regex patterns can slow the tab down.
+
+Version 0.1.0. [MIT license](LICENSE). [Privacy](docs/PRIVACY.md). [Security reports](SECURITY.md).
 
 Not affiliated with X or any browser vendor.
