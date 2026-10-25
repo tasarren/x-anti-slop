@@ -26,7 +26,7 @@
     "fflate": "^0.8.3",
     "jsdom": "^30.1.0",
     "typescript": "^7.0.2",
-    "web-ext": "10.6.0"
+    "web-ext": "10.8.0"
   },
   "overrides": {
     "image-size": "2.0.4"
