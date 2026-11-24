@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import type { SpawnSyncReturns } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
@@ -167,5 +167,96 @@ test("store checks never submit by default and require the item ID only for a Ch
     const result: SpawnSyncReturns<string> = spawnSync('bash', ['-e', '-u', '-o', 'pipefail', '-c', script], { encoding:'utf8', env:{ PATH:process.env['PATH'], ...base, STORE:store, SUBMIT:submit, CHROME_EXTENSION_ID:extensionId, AMO_JWT_ISSUER:issuer } });
     assert.equal(result.status, expected, result.stdout + result.stderr);
     assert.equal((result.stdout + result.stderr).includes('synthetic-private-value'), false);
+  }
+});
+
+test("documentation-only changes skip packaging without dropping the required build check", async () => {
+  const workflow = await readFile('.github/workflows/ci.yml', 'utf8');
+  assert.equal(workflow.includes('paths-ignore:'), false);
+  assert.match(workflow, /tags: \['v\*'\]/);
+  assert.match(workflow, /^ {2}workflow_dispatch:$/m);
+  assert.match(workflow, /if: github\.event_name == 'push' && github\.ref_type == 'tag'/);
+  assert.equal([...workflow.matchAll(/steps\.docs\.outputs\.skip != 'true'/g)].length, 8);
+  const script = workflow.match(/- name: Check whether the change is documentation only[\s\S]*?        run: \|\n([\s\S]*?)(?=\n      - )/)?.[1]?.replace(/^          /gm, '');
+  assert.ok(script);
+  const base = 'a'.repeat(40);
+  const head = 'b'.repeat(40);
+  const before = 'c'.repeat(40);
+  const sha = 'd'.repeat(40);
+  const zero = '0'.repeat(40);
+  const bin = await mkdtemp(join(tmpdir(), 'xas-docs-ci-'));
+  const fixturePath = join(bin, 'fixture.json');
+  const callsPath = join(bin, 'calls');
+  const outputPath = join(bin, 'output');
+  const summaryPath = join(bin, 'summary');
+  await writeFile(join(bin, 'gh'), [
+    '#!/bin/bash',
+    'printf \'%s\\n\' "$*" >> "$GH_LOG"',
+    'if [[ "${GH_EXIT:-0}" -ne 0 ]]; then echo compare-failed >&2; exit "$GH_EXIT"; fi',
+    'cat "$GH_FIXTURE"',
+    '',
+  ].join('\n'), { mode: 0o755 });
+  await chmod(join(bin, 'gh'), 0o755);
+  const docs = ['README.md', 'docs/PRIVACY.md', 'docs/nested/note.txt', 'docs/file[1].md', '.github/FUNDING.yml', 'LICENSE', 'LICENSE.txt', '.github/PULL_REQUEST_TEMPLATE.md', 'store-assets/README.md'];
+  const files = (paths: { filename: string; previous?: string }[]) => ({ files: paths.map(path => ({ filename: path.filename, previous_filename: path.previous ?? null, status: path.previous ? 'renamed' : 'modified' })) });
+  const cases = [
+    { name: 'pull request docs', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files(docs.map(filename => ({ filename }))), skip: true, calls: true, range: `${base}...${head}` },
+    { name: 'mixed docs and code', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files([{ filename: 'README.md' }, { filename: 'src/content.ts' }]), skip: false, calls: true, range: `${base}...${head}` },
+    { name: 'rename from code', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files([{ filename: 'docs/moved.md', previous: 'src/old.ts' }]), skip: false, calls: true, range: `${base}...${head}` },
+    { name: 'rename within docs', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files([{ filename: 'docs/MOVED.md', previous: 'README.md' }]), skip: true, calls: true, range: `${base}...${head}` },
+    { name: 'workflow file', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files([{ filename: '.github/workflows/ci.yml' }]), skip: false, calls: true, range: `${base}...${head}` },
+    { name: 'markdown extension only', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files([{ filename: 'notes.markdown' }]), skip: false, calls: true, range: `${base}...${head}` },
+    { name: 'file named docs', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files([{ filename: 'docs' }]), skip: false, calls: true, range: `${base}...${head}` },
+    { name: '299 markdown files', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files(Array.from({ length: 299 }, (_, index) => ({ filename: `docs/f${index}.md` }))), skip: true, calls: true, range: `${base}...${head}` },
+    { name: '300 markdown files', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files(Array.from({ length: 300 }, (_, index) => ({ filename: `docs/f${index}.md` }))), skip: false, calls: true, range: `${base}...${head}` },
+    { name: 'empty file list', event: 'pull_request', ref: 'branch', base, head, before, sha, body: { files: [] }, skip: false, calls: true, range: `${base}...${head}` },
+    { name: 'null file list', event: 'pull_request', ref: 'branch', base, head, before, sha, body: { files: null }, skip: false, calls: true, range: `${base}...${head}` },
+    { name: 'compare error', event: 'pull_request', ref: 'branch', base, head, before, sha, body: files([{ filename: 'README.md' }]), skip: false, calls: true, range: `${base}...${head}`, ghExit: '1' },
+    { name: 'invalid compare body', event: 'pull_request', ref: 'branch', base, head, before, sha, body: 'not-json', skip: false, calls: true, range: `${base}...${head}` },
+    { name: 'invalid sha', event: 'pull_request', ref: 'branch', base: 'abc', head, before, sha, body: files([{ filename: 'README.md' }]), skip: false, calls: false },
+    { name: 'zero sha', event: 'push', ref: 'branch', base, head, before: zero, sha, body: files([{ filename: 'README.md' }]), skip: false, calls: false },
+    { name: 'unchanged sha', event: 'pull_request', ref: 'branch', base, head: base, before, sha, body: files([{ filename: 'README.md' }]), skip: false, calls: false },
+    { name: 'push to main', event: 'push', ref: 'branch', base, head, before, sha, body: files([{ filename: 'AGENTS.md' }]), skip: true, calls: true, range: `${before}...${sha}` },
+    { name: 'tag push', event: 'push', ref: 'tag', base, head, before, sha, body: files([{ filename: 'README.md' }]), skip: false, calls: false },
+    { name: 'manual run', event: 'workflow_dispatch', ref: 'branch', base, head, before, sha, body: files([{ filename: 'README.md' }]), skip: false, calls: false },
+  ] as const;
+  try {
+    for (const item of cases) {
+      await writeFile(fixturePath, typeof item.body === 'string' ? item.body : JSON.stringify(item.body));
+      await rm(callsPath, { force: true });
+      await rm(outputPath, { force: true });
+      await rm(summaryPath, { force: true });
+      const result: SpawnSyncReturns<string> = spawnSync('bash', ['--noprofile', '--norc', '-eo', 'pipefail', '-c', script], {
+        encoding: 'utf8',
+        env: {
+          PATH: `${bin}:${process.env['PATH'] ?? ''}`,
+          GH_TOKEN: 'synthetic-private-value',
+          GH_LOG: callsPath,
+          GH_FIXTURE: fixturePath,
+          GH_EXIT: 'ghExit' in item ? item.ghExit : '0',
+          GITHUB_OUTPUT: outputPath,
+          GITHUB_STEP_SUMMARY: summaryPath,
+          GITHUB_REPOSITORY: 'tasarren/x-anti-slop',
+          GITHUB_SHA: item.sha,
+          EVENT_NAME: item.event,
+          REF_TYPE: item.ref,
+          BASE_SHA: item.base,
+          HEAD_SHA: item.head,
+          BEFORE_SHA: item.before,
+        },
+      });
+      const output = result.stdout + result.stderr;
+      assert.equal(result.status, 0, `${item.name}\n${output}`);
+      assert.equal(output.includes('synthetic-private-value'), false, item.name);
+      assert.equal(await readFile(outputPath, 'utf8'), `skip=${item.skip}\n`, item.name);
+      const calls = await readFile(callsPath, 'utf8').catch((error: NodeJS.ErrnoException) => error.code === 'ENOENT' ? '' : Promise.reject(error));
+      assert.equal(calls.length > 0, item.calls, `${item.name}\n${calls}`);
+      if ('range' in item) assert.equal(calls.trim(), `api repos/tasarren/x-anti-slop/compare/${item.range}`, item.name);
+      const summary = await readFile(summaryPath, 'utf8').catch((error: NodeJS.ErrnoException) => error.code === 'ENOENT' ? '' : Promise.reject(error));
+      assert.equal(summary.includes('install and packaging were skipped'), item.skip, item.name);
+      assert.equal(summary.includes('synthetic-private-value'), false, item.name);
+    }
+  } finally {
+    await rm(bin, { recursive: true, force: true });
   }
 });

@@ -8,7 +8,7 @@ Release tags are annotated tags named `vMAJOR.MINOR.PATCH`, starting with `v0.1.
 
 ## GitHub Actions
 
-**Build and release** runs on pull requests, pushes to `main`, `v*` tag pushes, and manual dispatch. It installs locked dependencies, type-checks, builds both browsers, runs regression/package checks, validates the Firefox extension, and uploads artifacts named for the commit. Build artifacts are retained for 30 days.
+**Build and release** runs on pull requests, pushes to `main`, `v*` tag pushes, and manual dispatch. A pull request or `main` push that only changes Markdown, files under `docs/`, `.github/FUNDING.yml`, or `LICENSE` completes the required `build` check without installing dependencies, packaging, or uploading artifacts. Tag pushes and manual runs always package. Every other run installs locked dependencies, type-checks, builds both browsers, runs regression/package checks, validates the Firefox extension, and uploads artifacts named for the commit. Build artifacts are retained for 30 days.
 
 Only a successful **tag push** creates a public GitHub Release with:
 
