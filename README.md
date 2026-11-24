@@ -4,7 +4,11 @@
 
 <h1 align="center">X-Anti-Slop</h1>
 
-I made this because X/Twitter's muted words don't support regular expressions. I wanted to filter out some of the repetitive stuff in my feed.
+<p align="center">
+  <a href="https://ko-fi.com/tasarren"><img src="https://img.shields.io/badge/Ko--fi-Support-FF5E5B?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
+</p>
+
+X's muted words don't support regular expressions. X-Anti-Slop does.
 
 It's a browser extension for Firefox and Chrome-based browsers. You add patterns, and it hides posts that match them. Filters and settings stay in your browser.
 
@@ -111,3 +115,7 @@ The extension only checks text that X has loaded. It doesn't scan images or vide
 Version 0.1.0. [MIT license](LICENSE). [Privacy](docs/PRIVACY.md). [Security reports](SECURITY.md).
 
 Not affiliated with X or any browser vendor.
+
+## Support
+
+Tip on [Ko-fi](https://ko-fi.com/tasarren) or sponsor [@tasarren on GitHub](https://github.com/sponsors/tasarren). Both help keep this project moving.
